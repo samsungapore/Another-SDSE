@@ -88,7 +88,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QToolButton" name="toolButton_4">
+       <widget class="QToolButton" name="change_language">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -99,7 +99,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>...</string>
+         <string>Changer le langage de l'éditeur</string>
         </property>
        </widget>
       </item>
@@ -155,7 +155,7 @@
              <number>7</number>
             </property>
             <item>
-             <widget class="QLabel" name="label_2">
+             <widget class="QLabel" name="translated_label">
               <property name="font">
                <font>
                 <pointsize>11</pointsize>
@@ -254,7 +254,7 @@
                </spacer>
               </item>
               <item>
-               <widget class="QLabel" name="label_10">
+               <widget class="QLabel" name="line_is_ok">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
                   <horstretch>0</horstretch>
@@ -329,7 +329,7 @@
              </layout>
             </item>
             <item>
-             <widget class="QLabel" name="label">
+             <widget class="QLabel" name="original_label">
               <property name="font">
                <font>
                 <pointsize>12</pointsize>
@@ -407,7 +407,7 @@
              </layout>
             </item>
             <item>
-             <widget class="QLabel" name="label_3">
+             <widget class="QLabel" name="japanese_label">
               <property name="font">
                <font>
                 <pointsize>12</pointsize>
@@ -443,7 +443,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="label_8">
+             <widget class="QLabel" name="comment_label">
               <property name="font">
                <font>
                 <pointsize>12</pointsize>
@@ -480,7 +480,7 @@
           <item>
            <layout class="QVBoxLayout" name="verticalLayout_6">
             <item>
-             <widget class="QLabel" name="label_5">
+             <widget class="QLabel" name="line_text_in_xml">
               <property name="font">
                <font>
                 <weight>75</weight>
@@ -572,7 +572,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="label_6">
+             <widget class="QLabel" name="file_progress">
               <property name="text">
                <string>Progression du fichier</string>
               </property>
@@ -809,7 +809,7 @@
                   <property name="plainText">
                    <string/>
                   </property>
-                  <property name="placeholderText">
+                  <property name="placeholderText" stdset="0">
                    <string>Traduction</string>
                   </property>
                  </widget>
@@ -944,24 +944,24 @@
      <x>0</x>
      <y>0</y>
      <width>1377</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuFichier">
+   <widget class="QMenu" name="fileMenu">
     <property name="title">
      <string>Fichier</string>
     </property>
-    <addaction name="open_lin_file"/>
-    <addaction name="actionSauvegarder"/>
+    <addaction name="open_file"/>
+    <addaction name="save_action"/>
    </widget>
-   <addaction name="menuFichier"/>
+   <addaction name="fileMenu"/>
   </widget>
-  <action name="open_lin_file">
+  <action name="open_file">
    <property name="text">
     <string>Ouvrir fichier script</string>
    </property>
   </action>
-  <action name="actionSauvegarder">
+  <action name="save_action">
    <property name="text">
     <string>Sauvegarder</string>
    </property>

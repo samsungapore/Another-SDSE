@@ -66,8 +66,11 @@ class Ui_MainWindow(QMainWindow):
         """
 
         # OPEN FILE
-        self.open_lin_file.triggered.connect(self.open_ui_launch)
+        self.open_file.triggered.connect(self.open_ui_launch)
         self.open_f_toolbox.clicked.connect(self.open_ui_launch)
+
+        # SAVE FILE
+        self.save_action.triggered.connect(self.save)
         self.save_toolbox.clicked.connect(self.save)
 
         self.txt_files.currentItemChanged.connect(self.change_text)
@@ -133,7 +136,27 @@ class Ui_MainWindow(QMainWindow):
         """
         Reload data from XML
         """
+
         if self.current_game != '':
+
+            ret = self.modification_has_been_made('TRANSLATED')
+
+            if ret == 1:
+                self.save()
+            elif ret == 2:
+                return
+            elif ret == 0:
+                self.discard = True
+            else:
+                ret = self.modification_has_been_made('COMMENT')
+
+                if ret == 1:
+                    self.save()
+                elif ret == 2:
+                    return
+                elif ret == 0:
+                    self.discard = True
+
             self.data[self.current_game] = XmlAnalyser("./script_data/" + self.current_game)
             self.data[self.current_game].analyse_scripts('TRANSLATED')
             self.data[self.current_game].analyse_scripts('ORIGINAL')
