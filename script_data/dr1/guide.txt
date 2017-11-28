@@ -1,3 +1,4 @@
 Put script of dr1 in this folder
 
 Use the DRAT to get script files
+https://github.com/Liquid-S/Danganronpa-Another-Tool
