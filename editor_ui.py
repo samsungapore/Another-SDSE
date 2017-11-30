@@ -140,14 +140,17 @@ class Ui_MainWindow(QMainWindow):
                 total += percent
                 self.data[game].analyse_scripts(tagname)
 
-    def reload_ui(self, update_curr_text=True):
-        """
-        Reload data from XML
-        """
+    def check_files_modifications(self):
+        ret = self.modification_has_been_made('TRANSLATED')
 
-        if self.current_game != '':
-
-            ret = self.modification_has_been_made('TRANSLATED')
+        if ret == 1:
+            self.save()
+        elif ret == 2:
+            return
+        elif ret == 0:
+            self.discard = True
+        else:
+            ret = self.modification_has_been_made('COMMENT')
 
             if ret == 1:
                 self.save()
@@ -155,15 +158,15 @@ class Ui_MainWindow(QMainWindow):
                 return
             elif ret == 0:
                 self.discard = True
-            else:
-                ret = self.modification_has_been_made('COMMENT')
 
-                if ret == 1:
-                    self.save()
-                elif ret == 2:
-                    return
-                elif ret == 0:
-                    self.discard = True
+    def reload_ui(self, update_curr_text=True):
+        """
+        Reload data from XML
+        """
+
+        if self.current_game != '':
+
+            self.check_files_modifications()
 
             self.data[self.current_game] = XmlAnalyser("./script_data/" + self.current_game)
             self.data[self.current_game].analyse_scripts('TRANSLATED')
@@ -229,23 +232,7 @@ class Ui_MainWindow(QMainWindow):
             self.close_open_ui()
 
             if self.current_game != '':
-                ret = self.modification_has_been_made('TRANSLATED')
-
-                if ret == 1:
-                    self.save()
-                elif ret == 2:
-                    return
-                elif ret == 0:
-                    self.discard = True
-                else:
-                    ret = self.modification_has_been_made('COMMENT')
-
-                    if ret == 1:
-                        self.save()
-                    elif ret == 2:
-                        return
-                    elif ret == 0:
-                        self.discard = True
+                self.check_files_modifications()
 
             script_name = item.text(column)
             if not self.script_name.text() == '':
@@ -254,6 +241,7 @@ class Ui_MainWindow(QMainWindow):
                 self.previous_script_name = script_name
 
             self.script_name.setText(script_name)
+            self.setWindowTitle(script_name + ' - Another SDSE 1.0')
 
             if not self.current_game == '':
                 self.previous_game = self.current_game
