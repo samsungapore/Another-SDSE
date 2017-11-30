@@ -6,6 +6,7 @@ from sys import argv, exit, stdout
 from PyQt5.QtGui import QPixmap, QIcon, QKeySequence, QTextCursor
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, \
     QTreeWidgetItem, QMessageBox, QShortcut
+from os import listdir
 from qtpy import uic
 
 from save import get_key
@@ -43,7 +44,7 @@ class Ui_MainWindow(QMainWindow):
                       'Chapitre 4', 'Chapitre 5', 'Chapitre 6', 'Epilogue',
                       'Autres')
 
-        self.games = ('dr1', 'dr2', 'drae')
+        self.games = list()
 
         self.plaintexts = {
             'TRANSLATED': self.translated,
@@ -125,12 +126,15 @@ class Ui_MainWindow(QMainWindow):
         """
         Loads the data present in /script_data
         """
-        percent = 100 / (len(self.games) * 6)
+
+        if len(listdir('./script_data/')) == 0:
+            return
+        percent = 100 / (len(listdir('./script_data/')) * 6)
         total = percent
         to_retrieve = ('TRANSLATED', 'ORIGINAL', 'JAPANESE', 'COMMENT',
                        'SPEAKER')
 
-        for game in self.games:
+        for game in listdir('./script_data/'):
             stdout.write('\r' + str(round(total, 2)) + ' %')
             total += percent
             self.data[game] = XmlAnalyser("./script_data/" + game)
@@ -139,6 +143,8 @@ class Ui_MainWindow(QMainWindow):
                 stdout.write('\r' + str(round(total, 2)) + ' %')
                 total += percent
                 self.data[game].analyse_scripts(tagname)
+            print('\r' + game + ' loaded.')
+            self.games.append(game)
 
     def check_files_modifications(self):
         ret = self.modification_has_been_made('TRANSLATED')
