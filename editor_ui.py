@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from os.path import join
-from sys import argv, exit
+from sys import argv, exit, stdout
 
 from PyQt5.QtGui import QPixmap, QIcon, QKeySequence, QTextCursor
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, \
@@ -40,7 +40,8 @@ class Ui_MainWindow(QMainWindow):
         self.discard = False
 
         self.parts = ('Prologue', 'Chapitre 1', 'Chapitre 2', 'Chapitre 3',
-                      'Chapitre 4', 'Chapitre 5', 'Chapitre 6', 'Epilogue')
+                      'Chapitre 4', 'Chapitre 5', 'Chapitre 6', 'Epilogue',
+                      'Autres')
 
         self.games = ('dr1', 'dr2', 'drae')
 
@@ -124,13 +125,20 @@ class Ui_MainWindow(QMainWindow):
         """
         Loads the data present in /script_data
         """
+        percent = 100 / (len(self.games) * 6)
+        total = percent
+        to_retrieve = ('TRANSLATED', 'ORIGINAL', 'JAPANESE', 'COMMENT',
+                       'SPEAKER')
+
         for game in self.games:
+            stdout.write('\r' + str(round(total, 2)) + ' %')
+            total += percent
             self.data[game] = XmlAnalyser("./script_data/" + game)
-            self.data[game].analyse_scripts('TRANSLATED')
-            self.data[game].analyse_scripts('ORIGINAL')
-            self.data[game].analyse_scripts('JAPANESE')
-            self.data[game].analyse_scripts('COMMENT')
-            self.data[game].analyse_scripts('SPEAKER')
+            
+            for tagname in to_retrieve:
+                stdout.write('\r' + str(round(total, 2)) + ' %')
+                total += percent
+                self.data[game].analyse_scripts(tagname)
 
     def reload_ui(self, update_curr_text=True):
         """
@@ -190,7 +198,10 @@ class Ui_MainWindow(QMainWindow):
                 tree_widgets.append(treewidgetitem)
 
             for elem in sorted(list(self.data[game].script_data['ORIGINAL'].keys())):
-                childtree = QTreeWidgetItem(tree_widgets[int(elem[2])])
+                if elem[1:3].isnumeric() and int(elem[1:3]) <= 7:
+                    childtree = QTreeWidgetItem(tree_widgets[int(elem[2])])
+                else:
+                    childtree = QTreeWidgetItem(tree_widgets[-1])
                 childtree.setText(0, elem)
 
         self.open_ui.treeWidget.addTopLevelItems(main_tree_w)
@@ -235,7 +246,6 @@ class Ui_MainWindow(QMainWindow):
                         return
                     elif ret == 0:
                         self.discard = True
-
 
             script_name = item.text(column)
             if not self.script_name.text() == '':
