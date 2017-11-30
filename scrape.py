@@ -7,6 +7,7 @@
 # IMPORTANT : for build with pyinstaller with -w option activated, need to change a selenium internal file
 # https://stackoverflow.com/questions/46520823/selenium-dont-work-after-exporting-to-exe-in-windowed-mode-in-pyinstaller
 
+import bs4
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.wait import WebDriverWait
@@ -101,3 +102,34 @@ def get_translation(jp_text):
         if browser is not None:
             browser.quit()
         return []
+
+ # browser = webdriver.PhantomJS()
+    #
+    # browser.get('https://www.jisho.org')
+    #
+    # input_txt = browser.find_element_by_class_name('text_input')
+    # input_txt = input_txt.find_element_by_tag_name('input')
+    # input_txt.send_keys(jp_text)
+    #
+    # browser.find_element_by_id('search_main').find_element_by_tag_name(
+    #     'button').click()
+    #
+    # WebDriverWait(browser, 42).until(
+    #     EC.presence_of_element_located((By.ID, "page_container"))
+    # )
+    #
+    # soup = bs4.BeautifulSoup(browser.page_source, 'lxml')
+    # jp_words = soup.find(id="zen_bar")
+    # jp_words = jp_words.find_all("li")
+    #
+    # for word in jp_words:
+    #     type_w = word.attrs['title']
+    #     original = word.find_class('japanese_word__text_wrapper')
+    #
+    #     print(word.get_text())
+    #
+    # print(soup.prettify())
+    #
+    # browser.quit()
+
+# get_translation('昨日すき焼きを食べました')
