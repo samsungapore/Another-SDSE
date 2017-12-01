@@ -58,6 +58,9 @@ class Ui_MainWindow(QMainWindow):
         self.open_ui = QDialog()
         uic.loadUi('gui/open_dialog.ui', self.open_ui)
 
+        self.search_ui = QDialog()
+        uic.loadUi('gui/search_ui.ui', self.search_ui)
+
         self.load_data()
         self.init_open_ui_tree_view()
         self.create_dupes_database()
@@ -95,6 +98,12 @@ class Ui_MainWindow(QMainWindow):
 
         ################################################################
 
+        ######################## SEARCH GUI PART ########################
+
+        self.search_ui.search_le.returnPressed.connect(self.search_in_all_database)
+
+        ################################################################
+
         # NAVIGATION BETWEEN SCRIPTS
         self.prev_script.clicked.connect(self.go_prev_script)
         self.next_script.clicked.connect(self.go_next_script)
@@ -111,6 +120,8 @@ class Ui_MainWindow(QMainWindow):
         
         # RELOAD BUTTON
         self.reload.clicked.connect(self.reload_ui)
+
+        self.search_in_data.clicked.connect(self.show_search_ui)
 
     def set_shortcuts(self):
         open_sc = QShortcut(QKeySequence(QKeySequence.Open), self)
@@ -247,6 +258,10 @@ class Ui_MainWindow(QMainWindow):
             self.open_ui.treeWidget.setCurrentItem(self.open_ui.treeWidget.itemAt(0, 0))
         self.open_ui.treeWidget.setFocus()
         self.open_ui.exec_()
+
+    def show_search_ui(self):
+        self.search_ui.show()
+        self.search_ui.exec_()
 
     def close_open_ui(self):
         """
@@ -561,6 +576,23 @@ class Ui_MainWindow(QMainWindow):
 
         with open(xml_file_file, 'wb') as f:
             f.write(buffer.encode('utf-16-le'))
+
+    def search_in_all_database(self):
+        if self.search_ui.search_le.text() == '' or self.current_game == '':
+            return
+
+        self.search_ui.file_list.clear()
+
+        script = self.data[self.current_game].script_data
+        for section in script:
+            if section == 'SPEAKER':
+                continue
+            for file in script[section]:
+                for line in script[section][file]:
+                    if line.lower().find(self.search_ui.search_le.text().lower()) != -1:
+                        self.search_ui.file_list.addItem(file)
+            self.search_ui.file_list.sortItems()
+            self.search_ui.file_list.setCurrentRow(0)
 
     def jisho_search(self):
         self.jp_text.setDisabled(True)

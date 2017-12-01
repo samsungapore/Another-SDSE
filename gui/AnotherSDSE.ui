@@ -72,6 +72,22 @@
        </widget>
       </item>
       <item>
+       <widget class="QToolButton" name="search_in_data">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>Rechercher</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QToolButton" name="settings_toolbox">
         <property name="enabled">
          <bool>false</bool>
@@ -100,22 +116,6 @@
         </property>
         <property name="text">
          <string>Changer le langage de l'éditeur</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QToolButton" name="toolButton_3">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>...</string>
         </property>
        </widget>
       </item>
@@ -622,7 +622,7 @@
              </sizepolicy>
             </property>
             <property name="currentIndex">
-             <number>2</number>
+             <number>3</number>
             </property>
             <widget class="QWidget" name="tab">
              <attribute name="title">
@@ -809,7 +809,7 @@
                   <property name="plainText">
                    <string/>
                   </property>
-                  <property name="placeholderText" stdset="0">
+                  <property name="placeholderText">
                    <string>Traduction</string>
                   </property>
                  </widget>
@@ -944,7 +944,7 @@
      <x>0</x>
      <y>0</y>
      <width>1377</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="fileMenu">
