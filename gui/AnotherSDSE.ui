@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1377</width>
-    <height>944</height>
+    <width>1140</width>
+    <height>764</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -72,6 +72,25 @@
        </widget>
       </item>
       <item>
+       <widget class="QToolButton" name="search_in_data">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>Rechercher</string>
+        </property>
+        <property name="shortcut">
+         <string>Ctrl+F</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QToolButton" name="settings_toolbox">
         <property name="enabled">
          <bool>false</bool>
@@ -100,38 +119,6 @@
         </property>
         <property name="text">
          <string>Changer le langage de l'éditeur</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QToolButton" name="toolButton_3">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>...</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QToolButton" name="toolButton_2">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>...</string>
         </property>
        </widget>
       </item>
@@ -424,8 +411,8 @@
              <widget class="QPlainTextEdit" name="japanese">
               <property name="font">
                <font>
-                <family>Arial</family>
-                <pointsize>10</pointsize>
+                <family>Segoe UI</family>
+                <pointsize>14</pointsize>
                </font>
               </property>
               <property name="locale">
@@ -622,7 +609,7 @@
              </sizepolicy>
             </property>
             <property name="currentIndex">
-             <number>2</number>
+             <number>3</number>
             </property>
             <widget class="QWidget" name="tab">
              <attribute name="title">
@@ -660,6 +647,11 @@
                 </row>
                 <row>
                  <property name="text">
+                  <string>Rechercher</string>
+                 </property>
+                </row>
+                <row>
+                 <property name="text">
                   <string>Copier ang-&gt;fr</string>
                  </property>
                 </row>
@@ -692,33 +684,56 @@
                  <property name="text">
                   <string>CTRL+O</string>
                  </property>
+                 <property name="flags">
+                  <set>ItemIsDragEnabled|ItemIsEnabled</set>
+                 </property>
                 </item>
                 <item row="1" column="0">
                  <property name="text">
                   <string>CTRL+S</string>
                  </property>
+                 <property name="flags">
+                  <set>ItemIsDragEnabled|ItemIsEnabled</set>
+                 </property>
                 </item>
                 <item row="2" column="0">
                  <property name="text">
-                  <string>CTRL+P</string>
+                  <string>CTRL+F</string>
+                 </property>
+                 <property name="flags">
+                  <set>ItemIsDragEnabled|ItemIsEnabled</set>
                  </property>
                 </item>
                 <item row="3" column="0">
                  <property name="text">
-                  <string>CTRL+J</string>
+                  <string>CTRL+P</string>
+                 </property>
+                 <property name="flags">
+                  <set>ItemIsDragEnabled|ItemIsEnabled</set>
                  </property>
                 </item>
                 <item row="4" column="0">
                  <property name="text">
-                  <string>CTRL+R</string>
+                  <string>CTRL+J</string>
+                 </property>
+                 <property name="flags">
+                  <set>ItemIsDragEnabled|ItemIsEnabled</set>
                  </property>
                 </item>
                 <item row="5" column="0">
                  <property name="text">
-                  <string>PageDwn</string>
+                  <string>CTRL+R</string>
+                 </property>
+                 <property name="flags">
+                  <set>ItemIsDragEnabled|ItemIsEnabled</set>
                  </property>
                 </item>
                 <item row="6" column="0">
+                 <property name="text">
+                  <string>PageDwn</string>
+                 </property>
+                </item>
+                <item row="7" column="0">
                  <property name="text">
                   <string>PageUp</string>
                  </property>
@@ -755,6 +770,9 @@
                 </item>
                 <item>
                  <widget class="QLineEdit" name="jp_text">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                     <horstretch>0</horstretch>
@@ -779,6 +797,9 @@
                 </item>
                 <item>
                  <widget class="QPushButton" name="search_btn">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
                   <property name="text">
                    <string>Rechercher</string>
                   </property>
@@ -786,6 +807,9 @@
                 </item>
                 <item>
                  <widget class="QPlainTextEdit" name="jp_result">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                     <horstretch>0</horstretch>
@@ -943,16 +967,23 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1377</width>
-     <height>21</height>
+     <width>1140</width>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="fileMenu">
     <property name="title">
      <string>Fichier</string>
     </property>
+    <widget class="QMenu" name="menu_Autre">
+     <property name="title">
+      <string>&amp;Autre</string>
+     </property>
+     <addaction name="delete_json_file"/>
+    </widget>
     <addaction name="open_file"/>
     <addaction name="save_action"/>
+    <addaction name="menu_Autre"/>
    </widget>
    <addaction name="fileMenu"/>
   </widget>
@@ -974,6 +1005,11 @@
   <action name="actionQuitter">
    <property name="text">
     <string>Quitter</string>
+   </property>
+  </action>
+  <action name="delete_json_file">
+   <property name="text">
+    <string>Supprimer le fichier JSON</string>
    </property>
   </action>
  </widget>
