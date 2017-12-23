@@ -1,4 +1,0 @@
-Put script of drae in this folder
-
-Use the DRAT to get script files
-https://github.com/Liquid-S/Danganronpa-Another-Tool
