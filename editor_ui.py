@@ -1,18 +1,23 @@
 # -*- coding: utf-8 -*-
-
-from os.path import join
+from PyQt5.QtCore import Qt
+from os.path import join, exists, expanduser
 from sys import argv, exit, stdout
 
 from PyQt5.QtGui import QPixmap, QIcon, QKeySequence, QTextCursor
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, \
     QTreeWidgetItem, QMessageBox, QShortcut
-from os import listdir
+from os import listdir, remove
 from qtpy import uic
 
+from json_file_working import load_json_file, dump_into_json
 from save import get_key
 from script_analyser import XmlAnalyser, length_is_okay, cleaned_text, \
     find_w_line, find_to_remove
 from translator import SearchThread
+
+json_file_name = 'sdse_data_file.json'
+
+# TODO: Reload function : reload current plaintext when finished reload
 
 
 class Ui_MainWindow(QMainWindow):
@@ -29,8 +34,15 @@ class Ui_MainWindow(QMainWindow):
 
         self.setWindowIcon(QIcon('img/cropped-avatarmiraiteam.ico'))
 
+        # dupes variable
         self.data = dict()
         self.dupes = dict()
+        self.data_modified_in_dupes = False
+        self.dupes_files_to_save = list()
+
+        self.search_data = dict()
+
+        self.pixmap_line_len = None
 
         self.file_has_changed = False
 
@@ -56,10 +68,15 @@ class Ui_MainWindow(QMainWindow):
         self.open_ui = QDialog()
         uic.loadUi('gui/open_dialog.ui', self.open_ui)
 
+        self.search_ui = QDialog()
+        uic.loadUi('gui/search_ui.ui', self.search_ui)
+
         self.load_data()
         self.init_open_ui_tree_view()
+        self.create_dupes_database()
         self.set_signals()
         self.set_shortcuts()
+        self.read_json()
 
     def set_signals(self):
         """
@@ -74,6 +91,9 @@ class Ui_MainWindow(QMainWindow):
         # SAVE FILE
         self.save_action.triggered.connect(self.save)
         self.save_toolbox.clicked.connect(self.save)
+
+        # DELETE JSON CONF FILE
+        self.delete_json_file.triggered.connect(self.delete_json_conf_file)
 
         self.txt_files.currentItemChanged.connect(self.change_text)
 
@@ -92,6 +112,15 @@ class Ui_MainWindow(QMainWindow):
 
         ################################################################
 
+        ######################## SEARCH GUI PART ########################
+
+        self.search_ui.search_le.returnPressed.connect(
+            self.search_in_all_database)
+        self.search_ui.file_list.currentRowChanged.connect(
+            self.show_search_results)
+
+        ################################################################
+
         # NAVIGATION BETWEEN SCRIPTS
         self.prev_script.clicked.connect(self.go_prev_script)
         self.next_script.clicked.connect(self.go_next_script)
@@ -105,16 +134,21 @@ class Ui_MainWindow(QMainWindow):
         # TRANSLATOR JISHO
         self.jp_text.returnPressed.connect(self.jisho_search)
         self.search_btn.clicked.connect(self.jisho_search)
-        
+
         # RELOAD BUTTON
         self.reload.clicked.connect(self.reload_ui)
+
+        self.search_in_data.clicked.connect(self.show_search_ui)
 
     def set_shortcuts(self):
         open_sc = QShortcut(QKeySequence(QKeySequence.Open), self)
         save_sc = QShortcut(QKeySequence(QKeySequence.Save), self)
-        copy_from_original_sc = QShortcut(QKeySequence(QKeySequence.Print), self)
-        go_prev_script_sc = QShortcut(QKeySequence(QKeySequence.MoveToPreviousPage), self)
-        go_next_script_sc = QShortcut(QKeySequence(QKeySequence.MoveToNextPage), self)
+        copy_from_original_sc = QShortcut(QKeySequence(QKeySequence.Print),
+                                          self)
+        go_prev_script_sc = QShortcut(
+            QKeySequence(QKeySequence.MoveToPreviousPage), self)
+        go_next_script_sc = QShortcut(
+            QKeySequence(QKeySequence.MoveToNextPage), self)
 
         open_sc.activated.connect(self.open_ui_launch)
         save_sc.activated.connect(self.save)
@@ -122,11 +156,47 @@ class Ui_MainWindow(QMainWindow):
         go_prev_script_sc.activated.connect(self.go_prev_script)
         go_next_script_sc.activated.connect(self.go_next_script)
 
+    def read_json(self):
+
+        if load_json_file(expanduser('~/' + json_file_name)) == {}:
+            with open(expanduser('~/' + json_file_name), 'w') as f:
+                f.write('\n')
+        else:
+            data = load_json_file(expanduser('~/' + json_file_name))
+            if data != {} and 'name' in data.keys():
+                self.put_init_file(data)
+
+    def delete_json_conf_file(self):
+        if exists(expanduser('~/' + json_file_name)):
+            remove(expanduser('~/' + json_file_name))
+            QMessageBox.information(self, 'Fichier JSON',
+                                    'Le fichier JSON a bien été supprimé de'
+                                    ' votre ordinateur.')
+        else:
+            QMessageBox.warning(self, 'Fichier JSON',
+                                'Le fichier JSON n\'est pas présent sur'
+                                ' votre ordinateur.')
+
+    def put_in_json(self):
+        dump_into_json(
+            expanduser('~/' + json_file_name),
+            {
+                'name': self.script_name.text(),
+                'game': self.current_game,
+                'line_index': self.txt_files.currentRow()
+            })
+
     def load_data(self):
         """
         Loads the data present in /script_data
         """
 
+        if not exists('./script_data/'):
+            QMessageBox.warning(self, 'Error: No script data',
+                                'No "script_data" folder found. No script could be loaded.\n'
+                                'Please create a directory "script_data" and create in this dir another dir, '
+                                'for example named "dr1" with the xml files in this directory.')
+            exit(0)
         if len(listdir('./script_data/')) == 0:
             return
         percent = 100 / (len(listdir('./script_data/')) * 6)
@@ -138,7 +208,7 @@ class Ui_MainWindow(QMainWindow):
             stdout.write('\r' + str(round(total, 2)) + ' %')
             total += percent
             self.data[game] = XmlAnalyser("./script_data/" + game)
-            
+
             for tagname in to_retrieve:
                 stdout.write('\r' + str(round(total, 2)) + ' %')
                 total += percent
@@ -146,13 +216,30 @@ class Ui_MainWindow(QMainWindow):
             print('\r' + game + ' loaded.')
             self.games.append(game)
 
+    def create_dupes_database(self):
+        for game in self.games:
+            self.dupes[game] = dict()
+            scripts = self.data[game].script_data['ORIGINAL']
+
+            tmp = dict()
+            for file in scripts:
+                i = 0
+                for line in scripts[file]:
+                    if line not in tmp.keys():
+                        tmp[line] = [{'script_name': file, 'line_index': i}]
+                    else:
+                        tmp[line].append(
+                            {'script_name': file, 'line_index': i})
+                        self.dupes[game][line] = tmp[line]
+                    i += 1
+
     def check_files_modifications(self):
         ret = self.modification_has_been_made('TRANSLATED')
 
         if ret == 1:
             self.save()
         elif ret == 2:
-            return
+            return False
         elif ret == 0:
             self.discard = True
         else:
@@ -161,9 +248,10 @@ class Ui_MainWindow(QMainWindow):
             if ret == 1:
                 self.save()
             elif ret == 2:
-                return
+                return False
             elif ret == 0:
                 self.discard = True
+        return True
 
     def reload_ui(self, update_curr_text=True):
         """
@@ -172,9 +260,11 @@ class Ui_MainWindow(QMainWindow):
 
         if self.current_game != '':
 
-            self.check_files_modifications()
+            if not self.check_files_modifications():
+                return
 
-            self.data[self.current_game] = XmlAnalyser("./script_data/" + self.current_game)
+            self.data[self.current_game] = XmlAnalyser(
+                "./script_data/" + self.current_game)
             self.data[self.current_game].analyse_scripts('TRANSLATED')
             self.data[self.current_game].analyse_scripts('ORIGINAL')
             self.data[self.current_game].analyse_scripts('JAPANESE')
@@ -206,7 +296,8 @@ class Ui_MainWindow(QMainWindow):
                 treewidgetitem.setText(0, part)
                 tree_widgets.append(treewidgetitem)
 
-            for elem in sorted(list(self.data[game].script_data['ORIGINAL'].keys())):
+            for elem in sorted(
+                    list(self.data[game].script_data['ORIGINAL'].keys())):
                 if elem[1:3].isnumeric() and int(elem[1:3]) <= 7:
                     childtree = QTreeWidgetItem(tree_widgets[int(elem[2])])
                 else:
@@ -222,9 +313,14 @@ class Ui_MainWindow(QMainWindow):
         self.open_ui.show()
         self.open_ui.setFocus()
         if self.open_ui.treeWidget.currentItem() is None:
-            self.open_ui.treeWidget.setCurrentItem(self.open_ui.treeWidget.itemAt(0, 0))
+            self.open_ui.treeWidget.setCurrentItem(
+                self.open_ui.treeWidget.itemAt(0, 0))
         self.open_ui.treeWidget.setFocus()
         self.open_ui.exec_()
+
+    def show_search_ui(self):
+        self.search_ui.show()
+        self.search_ui.exec_()
 
     def close_open_ui(self):
         """
@@ -233,12 +329,42 @@ class Ui_MainWindow(QMainWindow):
         self.open_ui.close()
         self.setFocus()
 
+    def put_init_file(self, data):
+
+        script_name = data['name']
+        if not self.script_name.text() == '':
+            self.previous_script_name = self.script_name.text()
+        else:
+            self.previous_script_name = script_name
+
+        self.script_name.setText(script_name)
+        self.setWindowTitle(script_name + ' - Another SDSE 1.0')
+
+        if not self.current_game == '':
+            self.previous_game = self.current_game
+        else:
+            self.previous_game = data['game']
+        self.current_game = data['game']
+        self.overall_progress_label.setText(
+            'Progression Totale sur ' + self.current_game)
+        # set the script files in the window
+        txt_files = self.data[self.current_game].script_data['ORIGINAL'][
+            script_name]
+        list_of_txt_index = [str(i) for i in range(len(txt_files))]
+        self.file_has_changed = True
+        self.txt_files.clear()
+        self.txt_files.addItems(list_of_txt_index)
+        self.txt_files.setCurrentItem(self.txt_files.item(data['line_index']))
+        self.reload_ui()
+
     def change_file(self, item, column):
-        if item.text(column) not in self.parts and item.text(column) not in self.games:
+        if item.text(column) not in self.parts and item.text(
+                column) not in self.games:
             self.close_open_ui()
 
             if self.current_game != '':
-                self.check_files_modifications()
+                if not self.check_files_modifications():
+                    return
 
             script_name = item.text(column)
             if not self.script_name.text() == '':
@@ -254,9 +380,11 @@ class Ui_MainWindow(QMainWindow):
             else:
                 self.previous_game = item.parent().parent().text(0)
             self.current_game = item.parent().parent().text(0)
-            self.overall_progress_label.setText('Progression Totale sur ' + self.current_game)
+            self.overall_progress_label.setText(
+                'Progression Totale sur ' + self.current_game)
             # set the script files in the window
-            txt_files = self.data[self.current_game].script_data['ORIGINAL'][script_name]
+            txt_files = self.data[self.current_game].script_data['ORIGINAL'][
+                script_name]
             list_of_txt_index = [str(i) for i in range(len(txt_files))]
             self.file_has_changed = True
             self.txt_files.clear()
@@ -281,22 +409,29 @@ class Ui_MainWindow(QMainWindow):
             prev_script_index = previous_item.text()
             if self.file_has_changed:
                 if not self.discard:
-                    self.data[self.previous_game].script_data['TRANSLATED'][self.previous_script_name][int(prev_script_index)] = '\n' + self.translated.toPlainText().strip('\n').strip() + '\n'
-                    self.data[self.previous_game].script_data['COMMENT'][self.previous_script_name][int(prev_script_index)] = '\n' + self.comment.toPlainText().strip('\n').strip() + '\n'
+                    self.update_script_database(self.previous_game,
+                                                self.previous_script_name,
+                                                prev_script_index)
                 else:
                     self.discard = False
                 self.file_has_changed = False
             else:
                 if not self.discard:
-                    self.data[self.current_game].script_data['TRANSLATED'][self.script_name.text()][int(prev_script_index)] = '\n' + self.translated.toPlainText().strip('\n').strip() + '\n'
-                    self.data[self.current_game].script_data['COMMENT'][self.script_name.text()][int(prev_script_index)] = '\n' + self.comment.toPlainText().strip('\n').strip() + '\n'
+                    self.update_script_database(self.current_game,
+                                                self.script_name.text(),
+                                                prev_script_index)
                 else:
                     self.discard = False
 
-        translated_text = self.data[self.current_game].script_data['TRANSLATED'][self.script_name.text()][int(script_index)][1:-1]
-        original_text = self.data[self.current_game].script_data['ORIGINAL'][self.script_name.text()][int(script_index)][1:-1]
-        comment_text = self.data[self.current_game].script_data['COMMENT'][self.script_name.text()][int(script_index)][1:-1]
-        speaker = self.data[self.current_game].script_data['SPEAKER'][self.script_name.text()][int(script_index)]
+        translated_text = \
+            self.data[self.current_game].script_data['TRANSLATED'][
+                self.script_name.text()][int(script_index)][1:-1]
+        original_text = self.data[self.current_game].script_data['ORIGINAL'][
+                            self.script_name.text()][int(script_index)][1:-1]
+        comment_text = self.data[self.current_game].script_data['COMMENT'][
+                           self.script_name.text()][int(script_index)][1:-1]
+        speaker = self.data[self.current_game].script_data['SPEAKER'][
+            self.script_name.text()][int(script_index)]
         if speaker == 'NO NAME':
             speaker = 'Narrateur'
         else:
@@ -306,7 +441,9 @@ class Ui_MainWindow(QMainWindow):
                 tmp += word.capitalize() + ' '
             speaker = tmp[:-1]
         try:
-            japanese_text = self.data[self.current_game].script_data['JAPANESE'][self.script_name.text()][int(script_index)][1:-1]
+            japanese_text = \
+                self.data[self.current_game].script_data['JAPANESE'][
+                    self.script_name.text()][int(script_index)][1:-1]
         except IndexError:
             japanese_text = ''
 
@@ -338,6 +475,41 @@ class Ui_MainWindow(QMainWindow):
         self.compute_file_progress()
         self.compute_global_progress()
 
+        if self.script_database_changed():
+            self.setWindowTitle(
+                self.script_name.text() + '* - Another SDSE 1.0')
+        else:
+            self.setWindowTitle(
+                self.script_name.text() + ' - Another SDSE 1.0')
+
+    def update_script_database(self, game, script_name, prev_script_index):
+        # retrieving texts data
+        original_line = self.data[game].script_data['ORIGINAL'][script_name][
+            int(prev_script_index)]
+        translated_text_to_save = '\n%s\n' % (
+            self.translated.toPlainText().strip('\n').strip())
+        comment_text_to_save = '\n%s\n' % (
+            self.comment.toPlainText().strip('\n').strip())
+
+        # check if the text modified belongs to the dupes database
+        if original_line in self.dupes[game].keys():
+            for element_to_save in self.dupes[game][original_line]:
+                if element_to_save['script_name'] != script_name:
+                    self.data_modified_in_dupes = True
+                self.data[game].script_data['TRANSLATED'][
+                    element_to_save['script_name']][
+                    element_to_save['line_index']] = translated_text_to_save
+                self.dupes_files_to_save.append(element_to_save['script_name'])
+            if self.data_modified_in_dupes:
+                self.dupes_files_to_save = list(set(self.dupes_files_to_save))
+            else:
+                self.dupes_files_to_save = list()
+        else:
+            self.data[game].script_data['TRANSLATED'][script_name][
+                int(prev_script_index)] = translated_text_to_save
+            self.data[game].script_data['COMMENT'][script_name][
+                int(prev_script_index)] = comment_text_to_save
+
     def compute_file_progress(self):
         translated_count = 0
         total_txt = len(self.data[self.current_game].script_data['TRANSLATED'][
@@ -346,7 +518,8 @@ class Ui_MainWindow(QMainWindow):
             if self.data[self.current_game].script_data['TRANSLATED'][
                    self.script_name.text()][k][1:-1] != '':
                 translated_count += 1
-        self.progress_file_label.setText("%s / %s" % (translated_count, total_txt))
+        self.progress_file_label.setText(
+            "%s / %s" % (translated_count, total_txt))
         self.xml_progress.setValue(int(translated_count / total_txt * 100))
 
     def compute_global_progress(self):
@@ -354,19 +527,22 @@ class Ui_MainWindow(QMainWindow):
         total_script = 0
         translated_count = 0
         for scripts in script_data:
-            total_script += len(self.data[self.current_game].script_data['TRANSLATED'][scripts])
-            curr_total_scripts = len(self.data[self.current_game].script_data['TRANSLATED'][scripts])
+            total_script += len(
+                self.data[self.current_game].script_data['TRANSLATED'][
+                    scripts])
+            curr_total_scripts = len(
+                self.data[self.current_game].script_data['TRANSLATED'][
+                    scripts])
             for k in range(curr_total_scripts):
-                if self.data[self.current_game].script_data['TRANSLATED'][scripts][k][1:-1] != '':
+                if self.data[self.current_game].script_data['TRANSLATED'][
+                       scripts][k][1:-1] != '':
                     translated_count += 1
-        self.global_progress_label.setText("%s / %s" % (translated_count, total_script))
-        self.overall_progress.setValue(int(translated_count / total_script * 100))
+        self.global_progress_label.setText(
+            "%s / %s" % (translated_count, total_script))
+        self.overall_progress.setValue(
+            int(translated_count / total_script * 100))
 
-    def modification_has_been_made(self, tagname):
-
-        prev_script_index = self.txt_files.currentItem().text()
-        translated_backup = self.data[self.current_game].script_data[tagname][self.script_name.text()][int(prev_script_index)]
-        self.data[self.current_game].script_data[tagname][self.script_name.text()][int(prev_script_index)] = '\n' + self.plaintexts[tagname].toPlainText().strip('\n').strip() + '\n'
+    def script_database_changed(self, tagname='TRANSLATED'):
 
         xml_file = self.script_name.text()
 
@@ -381,8 +557,12 @@ class Ui_MainWindow(QMainWindow):
         # decode the utf-16-le encoding, in order to be able to manipulate the actual content
         buffer = buffer.decode('utf-16-le')
         # get the index of the first line of script in the buffer
-        trad_begin = buffer.find('<'+tagname+' N°') + len('<'+tagname+' N°')
-        trad_end = buffer.find('</'+tagname+' N°') + len('</'+tagname+' N°') + 4
+        trad_begin = buffer.find('<' + tagname + ' N°') + len(
+            '<' + tagname + ' N°')
+        trad_end = buffer.find('</' + tagname + ' N°') + len(
+            '</' + tagname + ' N°') + 4
+        xml_file_data = self.data[self.current_game].script_data[tagname][
+            xml_file]
 
         index = 0
         while trad_begin != -1 and trad_end != -1:
@@ -392,40 +572,101 @@ class Ui_MainWindow(QMainWindow):
                 trad_begin += 1
             trad_begin += 1
 
-            if buffer[trad_begin:trad_end] != self.data[self.current_game].script_data[tagname][xml_file][index] + '</'+tagname+' N°' + short_key + '>':
+            if buffer[trad_begin:trad_end] != \
+                    self.data[self.current_game].script_data[tagname][
+                        xml_file][
+                        index] + '</' + tagname + ' N°' + short_key + '>':
+                return True
+
+            if index == len(xml_file_data) - 1:
+                break
+            trad_begin = buffer.find('<' + tagname + ' N°', trad_begin) + len(
+                '<' + tagname + ' N°')
+            trad_end = buffer.find('</' + tagname + ' N°', trad_begin) + len(
+                '</' + tagname + ' N°') + 4
+            index += 1
+
+        return False
+
+    def modification_has_been_made(self, tagname):
+
+        prev_script_index = self.txt_files.currentItem().text()
+        translated_backup = self.data[self.current_game].script_data[tagname][
+            self.script_name.text()][int(prev_script_index)]
+        self.data[self.current_game].script_data[tagname][
+            self.script_name.text()][int(prev_script_index)] = '\n' + \
+                                                               self.plaintexts[
+                                                                   tagname].toPlainText().strip(
+                                                                   '\n').strip() + '\n'
+
+        xml_file = self.script_name.text()
+
+        xml_file_file = join('script_data', self.current_game,
+                             xml_file.split('.')[0], xml_file)
+        # open file in binary mode
+        f = open(xml_file_file, 'rb')
+        # store everything in a variable
+        buffer = f.read()
+        # close the file
+        f.close()
+        # decode the utf-16-le encoding, in order to be able to manipulate the actual content
+        buffer = buffer.decode('utf-16-le')
+        # get the index of the first line of script in the buffer
+        trad_begin = buffer.find('<' + tagname + ' N°') + len(
+            '<' + tagname + ' N°')
+        trad_end = buffer.find('</' + tagname + ' N°') + len(
+            '</' + tagname + ' N°') + 4
+        xml_file_data = self.data[self.current_game].script_data[tagname][
+            xml_file]
+
+        index = 0
+        while trad_begin != -1 and trad_end != -1:
+            short_key = get_key(buffer, trad_begin)  # '001'
+
+            while buffer[trad_begin] != '>':
+                trad_begin += 1
+            trad_begin += 1
+
+            if buffer[trad_begin:trad_end] != \
+                    self.data[self.current_game].script_data[tagname][
+                        xml_file][
+                        index] + '</' + tagname + ' N°' + short_key + '>':
                 answer = QMessageBox.question(self,
                                               'Fichier non sauvegardé',
                                               'Certains fichiers n\'ont pas été '
                                               'sauvegardé. Voulez vous sauvegarder ?',
-                                              QMessageBox.Save|QMessageBox.Discard|QMessageBox.Cancel,
+                                              QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
                                               QMessageBox.Cancel)
 
                 if answer == QMessageBox.Save:
                     return 1
                 elif answer == QMessageBox.Discard:
                     self.data[self.current_game].script_data[tagname][
-                        self.script_name.text()][int(prev_script_index)] = translated_backup
+                        self.script_name.text()][
+                        int(prev_script_index)] = translated_backup
                     return 0
                 elif answer == QMessageBox.Cancel:
                     return 2
 
-            if index == self.txt_files.count() - 1:
+            if index == len(xml_file_data) - 1:
                 break
-            trad_begin = buffer.find('<'+tagname+' N°', trad_begin) + len(
-                '<'+tagname+' N°')
-            trad_end = buffer.find('</'+tagname+' N°', trad_begin) + len(
-                '</'+tagname+' N°') + 4
+            trad_begin = buffer.find('<' + tagname + ' N°', trad_begin) + len(
+                '<' + tagname + ' N°')
+            trad_end = buffer.find('</' + tagname + ' N°', trad_begin) + len(
+                '</' + tagname + ' N°') + 4
             index += 1
 
         return 3
 
     def go_prev_script(self):
         if self.txt_files.currentRow() > 0:
-            self.txt_files.setCurrentItem(self.txt_files.item(self.txt_files.currentRow() - 1))
+            self.txt_files.setCurrentItem(
+                self.txt_files.item(self.txt_files.currentRow() - 1))
 
     def go_next_script(self):
         if self.txt_files.currentRow() < self.txt_files.count() - 1:
-            self.txt_files.setCurrentItem(self.txt_files.item(self.txt_files.currentRow() + 1))
+            self.txt_files.setCurrentItem(
+                self.txt_files.item(self.txt_files.currentRow() + 1))
 
     def check_line_len(self):
 
@@ -438,10 +679,14 @@ class Ui_MainWindow(QMainWindow):
         self.line_count.display(cursor.columnNumber() - to_remove)
 
         if length_is_okay(self.translated.toPlainText()):
-            self.check_line_icon.setPixmap(QPixmap('img/ok.jpeg'))
+            if self.pixmap_line_len is None or self.pixmap_line_len == 'error':   
+                self.check_line_icon.setPixmap(QPixmap('img/ok.jpeg'))
+                self.pixmap_line_len = 'ok'
         else:
-            self.check_line_icon.setPixmap(QPixmap('img/error.png'))
-            
+            if self.pixmap_line_len is None or self.pixmap_line_len == 'ok':
+                self.check_line_icon.setPixmap(QPixmap('img/error.png'))
+                self.pixmap_line_len = 'error'
+
     def update_line_len(self):
 
         blockText = self.translated.toPlainText().split('\n')
@@ -454,9 +699,11 @@ class Ui_MainWindow(QMainWindow):
 
     def copy_from_original_func(self):
         self.translated.setPlainText(self.original.toPlainText())
+        self.translated.moveCursor(QTextCursor.EndOfLine)
 
     def copy_from_japanese_func(self):
         self.translated.setPlainText(self.japanese.toPlainText())
+        self.translated.moveCursor(QTextCursor.EndOfLine)
 
     def save(self):
         """
@@ -468,7 +715,11 @@ class Ui_MainWindow(QMainWindow):
             if self.current_game == '':
                 return
             prev_script_index = self.txt_files.currentItem().text()
-            self.data[self.current_game].script_data[tagname][self.script_name.text()][int(prev_script_index)] = '\n' + self.plaintexts[tagname].toPlainText().strip('\n').strip() + '\n'
+            self.data[self.current_game].script_data[tagname][
+                self.script_name.text()][int(prev_script_index)] = '\n' + \
+                                                                   self.plaintexts[
+                                                                       tagname].toPlainText().strip(
+                                                                       '\n').strip() + '\n'
 
             # compute file progress
             self.compute_file_progress()
@@ -476,37 +727,99 @@ class Ui_MainWindow(QMainWindow):
 
             xml_file = self.script_name.text()
 
-            xml_file_file = join('script_data', self.current_game, xml_file.split('.')[0], xml_file)
-            # open file in binary mode
-            f = open(xml_file_file, 'rb')
-            # store everything in a variable
-            buffer = f.read()
-            # close the file
-            f.close()
-            # decode the utf-16-le encoding, in order to be able to manipulate the actual content
-            buffer = buffer.decode('utf-16-le')
-            # get the index of the first line of script in the buffer
-            trad_begin = buffer.find('<'+tagname+' N°') + len('<'+tagname+' N°')
-            trad_end = buffer.find('</'+tagname+' N°') + len('</'+tagname+' N°') + 4
+            if not self.data_modified_in_dupes:
+                self.save_file(xml_file, tagname)
+            else:
+                for xml_file in self.dupes_files_to_save:
+                    self.save_file(xml_file, tagname)
+                self.data_modified_in_dupes = False
+        self.setWindowTitle(self.script_name.text() + ' - Another SDSE 1.0')
 
-            index = 0
-            while trad_begin != -1 and trad_end != -1:
-                short_key = get_key(buffer, trad_begin)  # '001'
+    def save_file(self, xml_file, tagname):
+        xml_file_file = join('script_data', self.current_game,
+                             xml_file.split('.')[0], xml_file)
+        xml_file_data = self.data[self.current_game].script_data[tagname][
+            xml_file]
+        # open file in binary mode
+        f = open(xml_file_file, 'rb')
+        # store everything in a variable
+        buffer = f.read()
+        # close the file
+        f.close()
+        # decode the utf-16-le encoding, in order to be able to manipulate the actual content
+        buffer = buffer.decode('utf-16-le')
+        # get the index of the first line of script in the buffer
+        trad_begin = buffer.find('<' + tagname + ' N°') + len(
+            '<' + tagname + ' N°')
+        trad_end = buffer.find('</' + tagname + ' N°') + len(
+            '</' + tagname + ' N°') + 4
 
-                while buffer[trad_begin] != '>':
-                    trad_begin += 1
+        index = 0
+        while trad_begin != -1 and trad_end != -1:
+            short_key = get_key(buffer, trad_begin)  # '001'
+
+            while buffer[trad_begin] != '>':
                 trad_begin += 1
+            trad_begin += 1
 
-                buffer = buffer.replace(buffer[trad_begin:trad_end], self.data[self.current_game].script_data[tagname][xml_file][index] + '</'+tagname+' N°' + short_key + '>')
+            buffer = buffer.replace(buffer[trad_begin:trad_end], xml_file_data[
+                index] + '</' + tagname + ' N°' + short_key + '>')
 
-                if index == self.txt_files.count() - 1:
-                    break
-                trad_begin = buffer.find('<'+tagname+' N°', trad_begin) + len('<'+tagname+' N°')
-                trad_end = buffer.find('</'+tagname+' N°', trad_begin) + len('</'+tagname+' N°') + 4
-                index += 1
+            if index == len(xml_file_data) - 1:
+                break
+            trad_begin = buffer.find('<' + tagname + ' N°', trad_begin) + len(
+                '<' + tagname + ' N°')
+            trad_end = buffer.find('</' + tagname + ' N°', trad_begin) + len(
+                '</' + tagname + ' N°') + 4
+            index += 1
 
+        try:
             with open(xml_file_file, 'wb') as f:
                 f.write(buffer.encode('utf-16-le'))
+        except OSError:
+            return
+
+    def search_in_all_database(self):
+        if self.search_ui.search_le.text() == '' or self.current_game == '':
+            return
+
+        self.search_ui.file_list.clear()
+        self.search_data.clear()
+
+        tmp_search_data = list()
+        script = self.data[self.current_game].script_data
+        for section in script:
+            if section == 'SPEAKER':
+                continue
+            for file in script[section]:
+                i = 0
+                for line in script[section][file]:
+                    if line.lower().find(
+                            self.search_ui.search_le.text().lower()) != -1:
+                        if file + '/' + str(i) not in tmp_search_data:
+                            tmp_search_data.append(file + '/' + str(i))
+                            self.search_ui.file_list.addItem(
+                                file + '/' + str(i))
+                            self.search_data[file] = {
+                                'TRANSLATED': script['TRANSLATED'][file][i],
+                                'ORIGINAL': script['ORIGINAL'][file][i],
+                                'JAPANESE': script['JAPANESE'][file][i],
+                                'index': i
+                            }
+                    i += 1
+            self.search_ui.file_list.sortItems()
+            self.search_ui.file_list.setCurrentRow(0)
+
+    def show_search_results(self, row):
+        if row == -1:
+            return
+        s_name = self.search_ui.file_list.item(row).text().split('/')[0]
+        self.search_ui.translated.setPlainText(
+            self.search_data[s_name]['TRANSLATED'][1:-1])
+        self.search_ui.original.setPlainText(
+            self.search_data[s_name]['ORIGINAL'][1:-1])
+        self.search_ui.japanese.setPlainText(
+            self.search_data[s_name]['JAPANESE'][1:-1])
 
     def jisho_search(self):
         self.jp_text.setDisabled(True)
@@ -535,23 +848,29 @@ class Ui_MainWindow(QMainWindow):
 
         if ret == 1:
             self.save()
+            self.put_in_json()
             event.accept()
         elif ret == 2:
             event.ignore()
         elif ret == 0:
             self.discard = True
+            self.put_in_json()
             event.accept()
         else:
             ret = self.modification_has_been_made('COMMENT')
 
             if ret == 1:
                 self.save()
+                self.put_in_json()
                 event.accept()
             elif ret == 2:
                 event.ignore()
             elif ret == 0:
                 self.discard = True
+                self.put_in_json()
                 event.accept()
+
+        self.put_in_json()
 
 
 app = QApplication(argv)

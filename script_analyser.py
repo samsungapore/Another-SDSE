@@ -28,14 +28,14 @@ def count_rem(w_line, i):
     while i < len(w_line) and w_line[i] != '>':
         count += 1
         i += 1
-    return count, i
+    return count, i + 1
 
 
 def find_to_remove(w_line):
     i = 0
     to_rem = 0
     while i < len(w_line):
-        if w_line[i] == '<':
+        while i < len(w_line) and w_line[i] == '<':
             rem, i = count_rem(w_line, i)
             to_rem += rem
         i += 1
@@ -46,11 +46,11 @@ def cleaned_text(w_line):
     i = 0
     new_line = list()
     while i < len(w_line):
-        if w_line[i] == '<':
+        while i < len(w_line) and w_line[i] == '<':
             var, i = count_rem(w_line, i)
-        i += 1
         if i < len(w_line) and w_line[i] != '<':
             new_line.append(w_line[i])
+        i += 1
     return ''.join(new_line)
 
 

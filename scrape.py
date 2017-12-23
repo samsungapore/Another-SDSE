@@ -85,23 +85,32 @@ def load_jisho_page(jp_text, link=None):
 
 
 def get_translation(jp_text):
-    browser = None
-    try:
-        browser, body = load_jisho_page(jp_text)
+    browser = webdriver.PhantomJS()
 
-        try:
-            jp_words = body.find_element_by_id("zen_bar").find_elements_by_tag_name("li")
-        except:
-            jp_phrase = [get_word(browser, body)]
-        else:
-            jp_phrase = get_phrase(browser, jp_words, body)
+    browser.get('https://www.bing.com/translator')
+    translation_field = browser.find_element_by_class_name(
+        'row translationPanel').find_element_by_class_name(
+        'textareaWrapper')
 
-        browser.quit()
-        return jp_phrase
-    except:
-        if browser is not None:
-            browser.quit()
-        return []
+
+# def get_translation(jp_text):
+#     browser = None
+#     try:
+#         browser, body = load_jisho_page(jp_text)
+#
+#         try:
+#             jp_words = body.find_element_by_id("zen_bar").find_elements_by_tag_name("li")
+#         except:
+#             jp_phrase = [get_word(browser, body)]
+#         else:
+#             jp_phrase = get_phrase(browser, jp_words, body)
+#
+#         browser.quit()
+#         return jp_phrase
+#     except:
+#         if browser is not None:
+#             browser.quit()
+#         return []
 
  # browser = webdriver.PhantomJS()
     #

@@ -1,6 +1,3 @@
-from os.path import join
-
-
 def get_key(buffer, index, long=False):
     """
     this function gets the key to unlock the inner strength of human kind.
