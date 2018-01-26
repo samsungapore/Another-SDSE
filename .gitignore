@@ -1,0 +1,17 @@
+.dropbox
+*.exe
+*.bat
+*.log
+.idea/
+AnotherSDSE.exe
+__pycache__/
+build.bat
+build/
+desktop.ini
+dist/
+editor_ui.spec
+get_jp_text.py
+ghostdriver.log
+img/Minicons-Free.png
+script_data.tar.gz
+script_data/

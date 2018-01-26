@@ -96,7 +96,6 @@ class SDSE1_Analyser:
 
 
 def open_file(filename):
-
     with open(filename, 'rb') as f:
         buf = f.read()
 
@@ -109,7 +108,6 @@ def open_file(filename):
 
 
 def get_file_script(buf, tag_name='TRANSLATED'):
-
     translated_s = '<' + tag_name + ' N°'
     end_translated_s = '</' + tag_name
 
@@ -133,7 +131,6 @@ def get_file_script(buf, tag_name='TRANSLATED'):
 
 
 def right_len(line):
-
     # remove <CLT> from line
     line = cleaned_text(line)
 

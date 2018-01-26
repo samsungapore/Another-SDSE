@@ -17,8 +17,6 @@ from translator import SearchThread
 
 json_file_name = 'sdse_data_file.json'
 
-# TODO: Reload function : reload current plaintext when finished reload
-
 
 class Ui_MainWindow(QMainWindow):
     """
@@ -76,7 +74,10 @@ class Ui_MainWindow(QMainWindow):
         self.create_dupes_database()
         self.set_signals()
         self.set_shortcuts()
-        self.read_json()
+        try:
+            self.read_json()
+        except:
+            print('Could not read json.')
 
     def set_signals(self):
         """
@@ -496,9 +497,7 @@ class Ui_MainWindow(QMainWindow):
             for element_to_save in self.dupes[game][original_line]:
                 if element_to_save['script_name'] != script_name:
                     self.data_modified_in_dupes = True
-                self.data[game].script_data['TRANSLATED'][
-                    element_to_save['script_name']][
-                    element_to_save['line_index']] = translated_text_to_save
+                self.data[game].script_data['TRANSLATED'][element_to_save['script_name']][element_to_save['line_index']] = translated_text_to_save
                 self.dupes_files_to_save.append(element_to_save['script_name'])
             if self.data_modified_in_dupes:
                 self.dupes_files_to_save = list(set(self.dupes_files_to_save))
@@ -679,7 +678,7 @@ class Ui_MainWindow(QMainWindow):
         self.line_count.display(cursor.columnNumber() - to_remove)
 
         if length_is_okay(self.translated.toPlainText()):
-            if self.pixmap_line_len is None or self.pixmap_line_len == 'error':   
+            if self.pixmap_line_len is None or self.pixmap_line_len == 'error':
                 self.check_line_icon.setPixmap(QPixmap('img/ok.jpeg'))
                 self.pixmap_line_len = 'ok'
         else:
@@ -738,10 +737,16 @@ class Ui_MainWindow(QMainWindow):
     def save_file(self, xml_file, tagname):
         xml_file_file = join('script_data', self.current_game,
                              xml_file.split('.')[0], xml_file)
-        xml_file_data = self.data[self.current_game].script_data[tagname][
-            xml_file]
-        # open file in binary mode
-        f = open(xml_file_file, 'rb')
+        try:
+            xml_file_data = self.data[self.current_game].script_data[tagname][xml_file]
+            # open file in binary mode
+            f = open(xml_file_file, 'rb')
+        except KeyError:
+            print("Key error " + xml_file + ". Dupe issue.")
+            return
+        except FileNotFoundError:
+            print(xml_file + " file could not be found in game " + self.current_game)
+            return
         # store everything in a variable
         buffer = f.read()
         # close the file
@@ -831,10 +836,7 @@ class Ui_MainWindow(QMainWindow):
         self.worker.start()
 
     def jisho_search_done(self, data):
-        s = str()
-        for part in data:
-            s += "(%s) %s : %s = %s\n\n" % (
-                part[2], part[0], part[1], part[3][0])
+
 
         self.jp_result.setPlainText(s)
         self.jp_text.setDisabled(False)
