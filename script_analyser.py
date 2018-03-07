@@ -6,6 +6,7 @@
 
 import os, sys
 
+from os import walk
 from os.path import exists
 
 
@@ -190,19 +191,16 @@ class XmlAnalyser:
     def analyse_scripts(self, tag_name='TRANSLATED'):
         new_script_data = dict()
 
-        xml_list = os.listdir(self.xml_path)
+        for dirpath, dirnames, filenames in walk(self.xml_path):
+            for filen in filenames:
+                if filen.endswith(".xml"):
+                    xml_file = os.path.join(dirpath, filen)
+                    try:
+                        buf = open_file(xml_file)
+                    except FileNotFoundError:
+                        continue
 
-        for xml_dir in xml_list:
-            if not xml_dir.startswith('e') or xml_dir.find('.') != -1:
-                continue
-
-            xml_file = os.path.join(self.xml_path, xml_dir, xml_dir + '.xml')
-            try:
-                buf = open_file(xml_file)
-            except FileNotFoundError:
-                continue
-
-            new_script_data[xml_dir + '.xml'] = get_file_script(buf, tag_name)
+                    new_script_data[filen] = get_file_script(buf, tag_name)
 
         self.script_data[tag_name] = new_script_data
 

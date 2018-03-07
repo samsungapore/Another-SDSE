@@ -546,8 +546,10 @@ class Ui_MainWindow(QMainWindow):
 
         xml_file = self.script_name.text()
 
-        xml_file_file = join('script_data', self.current_game,
-                             xml_file.split('.')[0], xml_file)
+        if not xml_file.startswith('e'):
+            xml_file_file = join('script_data', self.current_game, xml_file.split('-')[0], xml_file.split('.')[0], xml_file)
+        else:
+            xml_file_file = join('script_data', self.current_game, xml_file.split('.')[0], xml_file)
         # open file in binary mode
         f = open(xml_file_file, 'rb')
         # store everything in a variable
@@ -590,6 +592,8 @@ class Ui_MainWindow(QMainWindow):
 
     def modification_has_been_made(self, tagname):
 
+        if self.txt_files.currentItem() is None:
+            return 0
         prev_script_index = self.txt_files.currentItem().text()
         translated_backup = self.data[self.current_game].script_data[tagname][
             self.script_name.text()][int(prev_script_index)]
@@ -601,8 +605,11 @@ class Ui_MainWindow(QMainWindow):
 
         xml_file = self.script_name.text()
 
-        xml_file_file = join('script_data', self.current_game,
-                             xml_file.split('.')[0], xml_file)
+        if not xml_file.startswith('e'):
+            xml_file_file = join('script_data', self.current_game, xml_file.split('-')[0], xml_file.split('.')[0], xml_file)
+        else:
+            xml_file_file = join('script_data', self.current_game, xml_file.split('.')[0], xml_file)
+
         # open file in binary mode
         f = open(xml_file_file, 'rb')
         # store everything in a variable
@@ -736,8 +743,10 @@ class Ui_MainWindow(QMainWindow):
         self.setWindowTitle(self.script_name.text() + ' - Another SDSE 1.0')
 
     def save_file(self, xml_file, tagname):
-        xml_file_file = join('script_data', self.current_game,
-                             xml_file.split('.')[0], xml_file)
+        if not xml_file.startswith('e'):
+            xml_file_file = join('script_data', self.current_game, xml_file.split('-')[0], xml_file.split('.')[0], xml_file)
+        else:
+            xml_file_file = join('script_data', self.current_game, xml_file.split('.')[0], xml_file)
         try:
             xml_file_data = self.data[self.current_game].script_data[tagname][xml_file]
             # open file in binary mode
@@ -814,12 +823,20 @@ class Ui_MainWindow(QMainWindow):
                                     'index': i
                                 }
                             except:
-                                self.search_data[file] = {
-                                    'TRANSLATED': script['TRANSLATED'][file][i],
-                                    'ORIGINAL': script['ORIGINAL'][file][i],
-                                    'JAPANESE': "",
-                                    'index': i
-                                }
+                                try:
+                                    self.search_data[file] = {
+                                        'TRANSLATED': script['TRANSLATED'][file][i],
+                                        'ORIGINAL': script['ORIGINAL'][file][i],
+                                        'JAPANESE': script['COMMENT'][file][i],
+                                        'index': i
+                                    }
+                                except:
+                                    self.search_data[file] = {
+                                        'TRANSLATED': script['TRANSLATED'][file][i],
+                                        'ORIGINAL': script['ORIGINAL'][file][i],
+                                        'JAPANESE': "",
+                                        'index': i
+                                    }
                     i += 1
             self.search_ui.file_list.sortItems()
             self.search_ui.file_list.setCurrentRow(0)
