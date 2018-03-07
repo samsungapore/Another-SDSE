@@ -6,6 +6,8 @@
 
 import os, sys
 
+from os.path import exists
+
 
 def find_w_line(cursor, blockText):
     index = 0
@@ -70,8 +72,23 @@ def length_is_okay(line):
 
 
 class SDSE1_Analyser:
-    def __init__(self, umdimage_path):
+    def __init__(self, umdimage_path=None):
         self.umdimg_path = umdimage_path
+        self.data = []
+        self.reacts = []
+
+        self.chapter_correspondence = {
+            'e00', 'Prologue',
+            'e01', 'Chapitre 1',
+            'e02', 'Chapitre 2',
+            'e03', 'Chapitre 3',
+            'e04', 'Chapitre 4',
+            'e05', 'Chapitre 5',
+            'e06', 'Chapitre 6',
+            'e07', 'Épilogue',
+            'e08', 'FTE',
+            'e09', 'School Mode'
+        }
 
     def analyse_scripts(self):
         lin_list = os.listdir(self.umdimg_path)
@@ -79,6 +96,8 @@ class SDSE1_Analyser:
 
         for lin in lin_list:
             if not lin.endswith('.lin'):
+                continue
+            if not exists(os.path.join(self.umdimg_path, lin, lin.split('.')[0] + '.pak')):
                 continue
             for txt in os.listdir(os.path.join(self.umdimg_path, lin, lin.split('.')[0] + '.pak')):
                 f = open(os.path.join(self.umdimg_path, lin, lin.split('.')[0] + '.pak', txt), 'rb')
@@ -88,12 +107,23 @@ class SDSE1_Analyser:
                     buffer = buffer.decode('utf-8')
                 except UnicodeDecodeError:
                     buffer = buffer.decode('utf-16-le')
-                if not length_is_okay(buffer[:buffer.find('\0')]):
-                    print('ERROR of length at ' + lin + ' -> ' + txt + ' : ' + buffer[:buffer.find('\0')])
-                    total_err += 1
 
-        print("\nTotal errors : " + str(total_err))
+                if buffer.find("CLT 1") != -1:
+                    self.reacts.append((lin, txt, buffer))
+                else:
+                    self.data.append(buffer)
 
+        i = 0
+        for lin, txt, buffer in self.reacts:
+            ok = False
+            index = buffer.find('CLT 1') + len('CLT 1>')
+            to_find = buffer[index:buffer.find('<CLT>', index)]
+            for buf in self.data:
+                if buf.find(to_find) != -1:
+                    ok = True
+            if not ok:
+                print(lin + '/' + txt)
+            i += 1
 
 def open_file(filename):
     with open(filename, 'rb') as f:

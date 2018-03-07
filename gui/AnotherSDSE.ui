@@ -29,7 +29,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>Ouvrir fichier script</string>
+         <string>Open file</string>
         </property>
        </widget>
       </item>
@@ -42,7 +42,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>Sauvegarder</string>
+         <string>Save</string>
         </property>
        </widget>
       </item>
@@ -61,7 +61,7 @@
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Recharge les fichiers xml dans l'éditeur. &lt;/p&gt;&lt;p&gt;Par exemple, quelqu'un travaille sur un fichier &lt;span style=&quot; font-weight:600;&quot;&gt;X et vous travaillez aussi sur le fichier X&lt;/span&gt;. La personne travaillant sur le fichier &lt;span style=&quot; font-weight:600;&quot;&gt;X&lt;/span&gt; a terminé et sauvegarde ses modifications, il passe sur un autre fichier &lt;span style=&quot; font-weight:600;&quot;&gt;Z&lt;/span&gt;. Après quelques temps, vous avez terminé de travailler sur le fichier &lt;span style=&quot; font-weight:600;&quot;&gt;X&lt;/span&gt;, mais vous vous rendez compte que quelqu'un d'autre travaillait aussi sur le fichier &lt;span style=&quot; font-weight:600;&quot;&gt;X.&lt;/span&gt; Vous voulez alors voir ce qui a été sauvegardé par l'autre personne, dans ce cas vous pouvez actualiser la base de donnée.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
-         <string>Actualiser la base de donnée</string>
+         <string>Reload</string>
         </property>
         <property name="shortcut">
          <string>Ctrl+R</string>
@@ -83,7 +83,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>Rechercher</string>
+         <string>Find</string>
         </property>
         <property name="shortcut">
          <string>Ctrl+F</string>
@@ -102,7 +102,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>Réglages</string>
+         <string>Settings</string>
         </property>
        </widget>
       </item>
@@ -118,7 +118,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>Changer le langage de l'éditeur</string>
+         <string>Change language</string>
         </property>
        </widget>
       </item>
@@ -151,7 +151,7 @@
                </font>
               </property>
               <property name="text">
-               <string>Français</string>
+               <string>Translated</string>
               </property>
              </widget>
             </item>
@@ -186,7 +186,7 @@
                </font>
               </property>
               <property name="text">
-               <string>Locuteur : </string>
+               <string>Speaker :</string>
               </property>
              </widget>
             </item>
@@ -207,7 +207,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Longueur de la ligne</string>
+                 <string>Line length</string>
                 </property>
                </widget>
               </item>
@@ -252,7 +252,7 @@
                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Vérifie si les lignes du bloc &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;Français&amp;quot; &lt;/span&gt;ont la &lt;span style=&quot; font-weight:600;&quot;&gt;bonne longueur&lt;/span&gt;, c'est à dire &lt;span style=&quot; font-weight:600;&quot;&gt;inférieur à 64.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="text">
-                 <string>Lignes OK ? :</string>
+                 <string>Lines OK ? :</string>
                 </property>
                </widget>
               </item>
@@ -309,7 +309,7 @@
                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;copie&lt;/span&gt; le texte contenu dans le bloc &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;Anglais&amp;quot;&lt;/span&gt; et le &lt;span style=&quot; font-weight:600;&quot;&gt;colle&lt;/span&gt; dans le bloc &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;Français&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="text">
-                 <string>Copier texte Anglais vers Français</string>
+                 <string>Copy from Original</string>
                 </property>
                </widget>
               </item>
@@ -325,7 +325,7 @@
                </font>
               </property>
               <property name="text">
-               <string>Anglais</string>
+               <string>Original</string>
               </property>
              </widget>
             </item>
@@ -384,7 +384,7 @@
                  </size>
                 </property>
                 <property name="text">
-                 <string>Copier texte Japonais vers Français</string>
+                 <string>Copy from Japanese</string>
                 </property>
                 <property name="shortcut">
                  <string>Ctrl+J</string>
@@ -403,7 +403,7 @@
                </font>
               </property>
               <property name="text">
-               <string>Japonais</string>
+               <string>Japanese</string>
               </property>
              </widget>
             </item>
@@ -439,7 +439,7 @@
                </font>
               </property>
               <property name="text">
-               <string>Commentaire</string>
+               <string>Comment</string>
               </property>
              </widget>
             </item>
@@ -475,7 +475,7 @@
                </font>
               </property>
               <property name="text">
-               <string>Lignes de texte dans le xml</string>
+               <string>Lines in xml file</string>
               </property>
              </widget>
             </item>
@@ -561,7 +561,7 @@
             <item>
              <widget class="QLabel" name="file_progress">
               <property name="text">
-               <string>Progression du fichier</string>
+               <string>Current file progress</string>
               </property>
              </widget>
             </item>
@@ -764,7 +764,7 @@
                    </font>
                   </property>
                   <property name="text">
-                   <string>Traduction Jisho</string>
+                   <string>Jisho Translation</string>
                   </property>
                  </widget>
                 </item>
@@ -801,7 +801,7 @@
                    <bool>false</bool>
                   </property>
                   <property name="text">
-                   <string>Rechercher</string>
+                   <string>Search</string>
                   </property>
                  </widget>
                 </item>
@@ -948,7 +948,7 @@
            <enum>Qt::LeftToRight</enum>
           </property>
           <property name="text">
-           <string>Progression Totale sur le Jeu séléctioné</string>
+           <string>Overall progress on selected game</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
@@ -968,7 +968,7 @@
      <x>0</x>
      <y>0</y>
      <width>1140</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="fileMenu">

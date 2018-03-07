@@ -120,6 +120,8 @@ class Ui_MainWindow(QMainWindow):
         self.search_ui.file_list.currentRowChanged.connect(
             self.show_search_results)
 
+        self.search_ui.file_list.itemDoubleClicked.connect(self.go_to_script)
+
         ################################################################
 
         # NAVIGATION BETWEEN SCRIPTS
@@ -330,6 +332,10 @@ class Ui_MainWindow(QMainWindow):
         self.open_ui.close()
         self.setFocus()
 
+    def close_search_ui(self):
+        self.search_ui.close()
+        self.setFocus()
+
     def put_init_file(self, data):
 
         script_name = data['name']
@@ -424,15 +430,10 @@ class Ui_MainWindow(QMainWindow):
                 else:
                     self.discard = False
 
-        translated_text = \
-            self.data[self.current_game].script_data['TRANSLATED'][
-                self.script_name.text()][int(script_index)][1:-1]
-        original_text = self.data[self.current_game].script_data['ORIGINAL'][
-                            self.script_name.text()][int(script_index)][1:-1]
-        comment_text = self.data[self.current_game].script_data['COMMENT'][
-                           self.script_name.text()][int(script_index)][1:-1]
-        speaker = self.data[self.current_game].script_data['SPEAKER'][
-            self.script_name.text()][int(script_index)]
+        translated_text = self.data[self.current_game].script_data['TRANSLATED'][self.script_name.text()][int(script_index)][1:-1]
+        original_text = self.data[self.current_game].script_data['ORIGINAL'][self.script_name.text()][int(script_index)][1:-1]
+        comment_text = self.data[self.current_game].script_data['COMMENT'][self.script_name.text()][int(script_index)][1:-1]
+        speaker = self.data[self.current_game].script_data['SPEAKER'][self.script_name.text()][int(script_index)]
         if speaker == 'NO NAME':
             speaker = 'Narrateur'
         else:
@@ -805,26 +806,65 @@ class Ui_MainWindow(QMainWindow):
                             tmp_search_data.append(file + '/' + str(i))
                             self.search_ui.file_list.addItem(
                                 file + '/' + str(i))
-                            self.search_data[file] = {
-                                'TRANSLATED': script['TRANSLATED'][file][i],
-                                'ORIGINAL': script['ORIGINAL'][file][i],
-                                'JAPANESE': script['JAPANESE'][file][i],
-                                'index': i
-                            }
+                            try:
+                                self.search_data[file] = {
+                                    'TRANSLATED': script['TRANSLATED'][file][i],
+                                    'ORIGINAL': script['ORIGINAL'][file][i],
+                                    'JAPANESE': script['JAPANESE'][file][i],
+                                    'index': i
+                                }
+                            except:
+                                self.search_data[file] = {
+                                    'TRANSLATED': script['TRANSLATED'][file][i],
+                                    'ORIGINAL': script['ORIGINAL'][file][i],
+                                    'JAPANESE': "",
+                                    'index': i
+                                }
                     i += 1
             self.search_ui.file_list.sortItems()
             self.search_ui.file_list.setCurrentRow(0)
+
+    def go_to_script(self, item):
+        tmp = item.text().split('/')
+
+        script_name = tmp[0]
+        line_index = tmp[1]
+
+        if script_name not in self.parts and script_name not in self.games:
+            self.close_search_ui()
+
+            if self.current_game != '':
+                if not self.check_files_modifications():
+                    return
+
+            if not self.script_name.text() == '':
+                self.previous_script_name = self.script_name.text()
+            else:
+                self.previous_script_name = script_name
+
+            self.script_name.setText(script_name)
+            self.setWindowTitle(script_name + ' - Another SDSE 1.0')
+
+            if not self.current_game == '':
+                self.previous_game = self.current_game
+
+            self.overall_progress_label.setText('Progression Totale sur ' + self.current_game)
+            # set the script files in the window
+            txt_files = self.data[self.current_game].script_data['ORIGINAL'][script_name]
+            list_of_txt_index = [str(i) for i in range(len(txt_files))]
+            self.file_has_changed = True
+            self.txt_files.clear()
+            self.txt_files.addItems(list_of_txt_index)
+            self.txt_files.setCurrentItem(self.txt_files.item(int(line_index)))
+            self.reload_ui()
 
     def show_search_results(self, row):
         if row == -1:
             return
         s_name = self.search_ui.file_list.item(row).text().split('/')[0]
-        self.search_ui.translated.setPlainText(
-            self.search_data[s_name]['TRANSLATED'][1:-1])
-        self.search_ui.original.setPlainText(
-            self.search_data[s_name]['ORIGINAL'][1:-1])
-        self.search_ui.japanese.setPlainText(
-            self.search_data[s_name]['JAPANESE'][1:-1])
+        self.search_ui.translated.setPlainText(self.search_data[s_name]['TRANSLATED'][1:-1])
+        self.search_ui.original.setPlainText(self.search_data[s_name]['ORIGINAL'][1:-1])
+        self.search_ui.japanese.setPlainText(self.search_data[s_name]['JAPANESE'][1:-1])
 
     def jisho_search(self):
         self.jp_text.setDisabled(True)
@@ -837,8 +877,7 @@ class Ui_MainWindow(QMainWindow):
 
     def jisho_search_done(self, data):
 
-
-        self.jp_result.setPlainText(s)
+        self.jp_result.setPlainText("")
         self.jp_text.setDisabled(False)
         self.search_btn.setDisabled(False)
 
