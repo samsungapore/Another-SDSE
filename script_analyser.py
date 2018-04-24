@@ -200,7 +200,7 @@ class XmlAnalyser:
                     except FileNotFoundError:
                         continue
 
-                    new_script_data[filen] = get_file_script(buf, tag_name)
+                    new_script_data[xml_file] = get_file_script(buf, tag_name)
 
         self.script_data[tag_name] = new_script_data
 

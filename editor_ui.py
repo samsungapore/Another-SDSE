@@ -16,6 +16,7 @@ from script_analyser import XmlAnalyser, length_is_okay, cleaned_text, \
 from translator import SearchThread
 
 json_file_name = 'sdse_data_file.json'
+VERSION = "1.1"
 
 
 class Ui_MainWindow(QMainWindow):
@@ -37,6 +38,8 @@ class Ui_MainWindow(QMainWindow):
         self.dupes = dict()
         self.data_modified_in_dupes = False
         self.dupes_files_to_save = list()
+        self.script_ppath = None
+        self.search_sepatator = '||'
 
         self.search_data = dict()
 
@@ -167,7 +170,7 @@ class Ui_MainWindow(QMainWindow):
         else:
             data = load_json_file(expanduser('~/' + json_file_name))
             if data != {} and 'name' in data.keys():
-                self.put_init_file(data)
+                self.switch_file(data['name'], data['game'], data['line_index'])
 
     def delete_json_conf_file(self):
         if exists(expanduser('~/' + json_file_name)):
@@ -184,7 +187,7 @@ class Ui_MainWindow(QMainWindow):
         dump_into_json(
             expanduser('~/' + json_file_name),
             {
-                'name': self.script_name.text(),
+                'name': self.script_ppath,
                 'game': self.current_game,
                 'line_index': self.txt_files.currentRow()
             })
@@ -299,8 +302,8 @@ class Ui_MainWindow(QMainWindow):
                 treewidgetitem.setText(0, part)
                 tree_widgets.append(treewidgetitem)
 
-            for elem in sorted(
-                    list(self.data[game].script_data['ORIGINAL'].keys())):
+            for elem in sorted(list(self.data[game].script_data['ORIGINAL'].keys())):
+                elem = elem.split('/')[-1]
                 if elem[1:3].isnumeric() and int(elem[1:3]) <= 7:
                     childtree = QTreeWidgetItem(tree_widgets[int(elem[2])])
                 else:
@@ -336,32 +339,38 @@ class Ui_MainWindow(QMainWindow):
         self.search_ui.close()
         self.setFocus()
 
-    def put_init_file(self, data):
-
-        script_name = data['name']
+    def switch_file(self, script_name, game=None, line_index=0):
+        """
+        Switch file
+        :param script_name: full path
+        :param game: item.parent().parent().text(0)
+        :param line_index:
+        """
         if not self.script_name.text() == '':
             self.previous_script_name = self.script_name.text()
         else:
-            self.previous_script_name = script_name
+            self.previous_script_name = script_name.split('/')[-1]
 
-        self.script_name.setText(script_name)
-        self.setWindowTitle(script_name + ' - Another SDSE 1.0')
+        self.script_name.setText(script_name.split('/')[-1])
+        self.setWindowTitle(script_name.split('/')[-1] + ' - Another SDSE ' + VERSION)
 
         if not self.current_game == '':
             self.previous_game = self.current_game
         else:
-            self.previous_game = data['game']
-        self.current_game = data['game']
+            if game is not None:
+                self.previous_game = game
+        if game is not None:
+            self.current_game = game
         self.overall_progress_label.setText(
-            'Progression Totale sur ' + self.current_game)
+            'Progress on ' + self.current_game)
+        self.script_ppath = script_name
         # set the script files in the window
-        txt_files = self.data[self.current_game].script_data['ORIGINAL'][
-            script_name]
+        txt_files = self.data[self.current_game].script_data['ORIGINAL'][script_name]
         list_of_txt_index = [str(i) for i in range(len(txt_files))]
         self.file_has_changed = True
         self.txt_files.clear()
         self.txt_files.addItems(list_of_txt_index)
-        self.txt_files.setCurrentItem(self.txt_files.item(data['line_index']))
+        self.txt_files.setCurrentItem(self.txt_files.item(int(line_index)))
         self.reload_ui()
 
     def change_file(self, item, column):
@@ -373,31 +382,10 @@ class Ui_MainWindow(QMainWindow):
                 if not self.check_files_modifications():
                     return
 
-            script_name = item.text(column)
-            if not self.script_name.text() == '':
-                self.previous_script_name = self.script_name.text()
-            else:
-                self.previous_script_name = script_name
+            if not self.find_ppath(item.text(column)):
+                return
 
-            self.script_name.setText(script_name)
-            self.setWindowTitle(script_name + ' - Another SDSE 1.0')
-
-            if not self.current_game == '':
-                self.previous_game = self.current_game
-            else:
-                self.previous_game = item.parent().parent().text(0)
-            self.current_game = item.parent().parent().text(0)
-            self.overall_progress_label.setText(
-                'Progression Totale sur ' + self.current_game)
-            # set the script files in the window
-            txt_files = self.data[self.current_game].script_data['ORIGINAL'][
-                script_name]
-            list_of_txt_index = [str(i) for i in range(len(txt_files))]
-            self.file_has_changed = True
-            self.txt_files.clear()
-            self.txt_files.addItems(list_of_txt_index)
-            self.txt_files.setCurrentItem(self.txt_files.item(0))
-            self.reload_ui()
+            self.switch_file(self.script_ppath, item.parent().parent().text(0))
         else:
             if item.isExpanded():
                 self.open_ui.treeWidget.collapseItem(item)
@@ -405,6 +393,23 @@ class Ui_MainWindow(QMainWindow):
                 self.open_ui.treeWidget.expandItem(item)
 
             self.open_ui.treeWidget.scrollToItem(item)
+
+    def find_ppath(self, script_name):
+        for game in self.games:
+            for ppath in self.data[game].script_data['ORIGINAL']:
+                if ppath.find(script_name) != -1:
+                    self.script_ppath = ppath
+                    return True
+        QMessageBox.warning(QMessageBox(), self, "Error", "Couldn't load script", QMessageBox.Ok)
+        return False
+
+    def find_script_path(self, script_name):
+        for game in self.games:
+            for ppath in self.data[game].script_data['ORIGINAL']:
+                if ppath.find(script_name) != -1:
+                    return ppath
+        QMessageBox.warning(QMessageBox(), self, "Error", "Couldn't load script", QMessageBox.Ok)
+        return script_name
 
     def change_text(self, item, previous_item):
         if item is None:
@@ -417,7 +422,7 @@ class Ui_MainWindow(QMainWindow):
             if self.file_has_changed:
                 if not self.discard:
                     self.update_script_database(self.previous_game,
-                                                self.previous_script_name,
+                                                self.find_script_path(self.previous_script_name),
                                                 prev_script_index)
                 else:
                     self.discard = False
@@ -425,15 +430,18 @@ class Ui_MainWindow(QMainWindow):
             else:
                 if not self.discard:
                     self.update_script_database(self.current_game,
-                                                self.script_name.text(),
+                                                self.script_ppath,
                                                 prev_script_index)
                 else:
                     self.discard = False
 
-        translated_text = self.data[self.current_game].script_data['TRANSLATED'][self.script_name.text()][int(script_index)][1:-1]
-        original_text = self.data[self.current_game].script_data['ORIGINAL'][self.script_name.text()][int(script_index)][1:-1]
-        comment_text = self.data[self.current_game].script_data['COMMENT'][self.script_name.text()][int(script_index)][1:-1]
-        speaker = self.data[self.current_game].script_data['SPEAKER'][self.script_name.text()][int(script_index)]
+        translated_text = self.data[self.current_game].script_data['TRANSLATED'][self.script_ppath][int(script_index)][1:-1]
+        original_text = self.data[self.current_game].script_data['ORIGINAL'][self.script_ppath][int(script_index)][1:-1]
+        comment_text = self.data[self.current_game].script_data['COMMENT'][self.script_ppath][int(script_index)][1:-1]
+        try:
+            speaker = self.data[self.current_game].script_data['SPEAKER'][self.script_ppath][int(script_index)]
+        except IndexError:
+            speaker = 'System Text'
         if speaker == 'NO NAME':
             speaker = 'Narrateur'
         else:
@@ -443,9 +451,7 @@ class Ui_MainWindow(QMainWindow):
                 tmp += word.capitalize() + ' '
             speaker = tmp[:-1]
         try:
-            japanese_text = \
-                self.data[self.current_game].script_data['JAPANESE'][
-                    self.script_name.text()][int(script_index)][1:-1]
+            japanese_text = self.data[self.current_game].script_data['JAPANESE'][self.script_ppath][int(script_index)][1:-1]
         except IndexError:
             japanese_text = ''
 
@@ -486,8 +492,7 @@ class Ui_MainWindow(QMainWindow):
 
     def update_script_database(self, game, script_name, prev_script_index):
         # retrieving texts data
-        original_line = self.data[game].script_data['ORIGINAL'][script_name][
-            int(prev_script_index)]
+        original_line = self.data[game].script_data['ORIGINAL'][script_name][int(prev_script_index)]
         translated_text_to_save = '\n%s\n' % (
             self.translated.toPlainText().strip('\n').strip())
         comment_text_to_save = '\n%s\n' % (
@@ -512,14 +517,13 @@ class Ui_MainWindow(QMainWindow):
 
     def compute_file_progress(self):
         translated_count = 0
-        total_txt = len(self.data[self.current_game].script_data['TRANSLATED'][
-                            self.script_name.text()])
+        total_txt = len(self.data[self.current_game].script_data['TRANSLATED'][self.script_ppath])
+
         for k in range(total_txt):
-            if self.data[self.current_game].script_data['TRANSLATED'][
-                   self.script_name.text()][k][1:-1] != '':
+            if self.data[self.current_game].script_data['TRANSLATED'][self.script_ppath][k][1:-1] != '':
                 translated_count += 1
-        self.progress_file_label.setText(
-            "%s / %s" % (translated_count, total_txt))
+
+        self.progress_file_label.setText("%s / %s" % (translated_count, total_txt))
         self.xml_progress.setValue(int(translated_count / total_txt * 100))
 
     def compute_global_progress(self):
@@ -528,30 +532,19 @@ class Ui_MainWindow(QMainWindow):
         translated_count = 0
         for scripts in script_data:
             total_script += len(
-                self.data[self.current_game].script_data['TRANSLATED'][
-                    scripts])
+                self.data[self.current_game].script_data['TRANSLATED'][scripts])
             curr_total_scripts = len(
-                self.data[self.current_game].script_data['TRANSLATED'][
-                    scripts])
+                self.data[self.current_game].script_data['TRANSLATED'][scripts])
             for k in range(curr_total_scripts):
-                if self.data[self.current_game].script_data['TRANSLATED'][
-                       scripts][k][1:-1] != '':
+                if self.data[self.current_game].script_data['TRANSLATED'][scripts][k][1:-1] != '':
                     translated_count += 1
-        self.global_progress_label.setText(
-            "%s / %s" % (translated_count, total_script))
-        self.overall_progress.setValue(
-            int(translated_count / total_script * 100))
+        self.global_progress_label.setText("%s / %s" % (translated_count, total_script))
+        self.overall_progress.setValue(int(translated_count / total_script * 100))
 
     def script_database_changed(self, tagname='TRANSLATED'):
 
-        xml_file = self.script_name.text()
-
-        if not xml_file.startswith('e'):
-            xml_file_file = join('script_data', self.current_game, xml_file.split('-')[0], xml_file.split('.')[0], xml_file)
-        else:
-            xml_file_file = join('script_data', self.current_game, xml_file.split('.')[0], xml_file)
         # open file in binary mode
-        f = open(xml_file_file, 'rb')
+        f = open(self.script_ppath, 'rb')
         # store everything in a variable
         buffer = f.read()
         # close the file
@@ -563,8 +556,7 @@ class Ui_MainWindow(QMainWindow):
             '<' + tagname + ' N°')
         trad_end = buffer.find('</' + tagname + ' N°') + len(
             '</' + tagname + ' N°') + 4
-        xml_file_data = self.data[self.current_game].script_data[tagname][
-            xml_file]
+        xml_file_data = self.data[self.current_game].script_data[tagname][self.script_ppath]
 
         index = 0
         while trad_begin != -1 and trad_end != -1:
@@ -574,18 +566,13 @@ class Ui_MainWindow(QMainWindow):
                 trad_begin += 1
             trad_begin += 1
 
-            if buffer[trad_begin:trad_end] != \
-                    self.data[self.current_game].script_data[tagname][
-                        xml_file][
-                        index] + '</' + tagname + ' N°' + short_key + '>':
+            if buffer[trad_begin:trad_end] != self.data[self.current_game].script_data[tagname][self.script_ppath][index] + '</' + tagname + ' N°' + short_key + '>':
                 return True
 
             if index == len(xml_file_data) - 1:
                 break
-            trad_begin = buffer.find('<' + tagname + ' N°', trad_begin) + len(
-                '<' + tagname + ' N°')
-            trad_end = buffer.find('</' + tagname + ' N°', trad_begin) + len(
-                '</' + tagname + ' N°') + 4
+            trad_begin = buffer.find('<' + tagname + ' N°', trad_begin) + len('<' + tagname + ' N°')
+            trad_end = buffer.find('</' + tagname + ' N°', trad_begin) + len('</' + tagname + ' N°') + 4
             index += 1
 
         return False
@@ -595,23 +582,10 @@ class Ui_MainWindow(QMainWindow):
         if self.txt_files.currentItem() is None:
             return 0
         prev_script_index = self.txt_files.currentItem().text()
-        translated_backup = self.data[self.current_game].script_data[tagname][
-            self.script_name.text()][int(prev_script_index)]
-        self.data[self.current_game].script_data[tagname][
-            self.script_name.text()][int(prev_script_index)] = '\n' + \
-                                                               self.plaintexts[
-                                                                   tagname].toPlainText().strip(
-                                                                   '\n').strip() + '\n'
+        translated_backup = self.data[self.current_game].script_data[tagname][self.script_ppath][int(prev_script_index)]
+        self.data[self.current_game].script_data[tagname][self.script_ppath][int(prev_script_index)] = '\n' + self.plaintexts[tagname].toPlainText().strip('\n').strip() + '\n'
 
-        xml_file = self.script_name.text()
-
-        if not xml_file.startswith('e'):
-            xml_file_file = join('script_data', self.current_game, xml_file.split('-')[0], xml_file.split('.')[0], xml_file)
-        else:
-            xml_file_file = join('script_data', self.current_game, xml_file.split('.')[0], xml_file)
-
-        # open file in binary mode
-        f = open(xml_file_file, 'rb')
+        f = open(self.script_ppath, 'rb')
         # store everything in a variable
         buffer = f.read()
         # close the file
@@ -619,12 +593,9 @@ class Ui_MainWindow(QMainWindow):
         # decode the utf-16-le encoding, in order to be able to manipulate the actual content
         buffer = buffer.decode('utf-16-le')
         # get the index of the first line of script in the buffer
-        trad_begin = buffer.find('<' + tagname + ' N°') + len(
-            '<' + tagname + ' N°')
-        trad_end = buffer.find('</' + tagname + ' N°') + len(
-            '</' + tagname + ' N°') + 4
-        xml_file_data = self.data[self.current_game].script_data[tagname][
-            xml_file]
+        trad_begin = buffer.find('<' + tagname + ' N°') + len('<' + tagname + ' N°')
+        trad_end = buffer.find('</' + tagname + ' N°') + len('</' + tagname + ' N°') + 4
+        xml_file_data = self.data[self.current_game].script_data[tagname][self.script_ppath]
 
         index = 0
         while trad_begin != -1 and trad_end != -1:
@@ -634,33 +605,27 @@ class Ui_MainWindow(QMainWindow):
                 trad_begin += 1
             trad_begin += 1
 
-            if buffer[trad_begin:trad_end] != \
-                    self.data[self.current_game].script_data[tagname][
-                        xml_file][
-                        index] + '</' + tagname + ' N°' + short_key + '>':
-                answer = QMessageBox.question(self,
-                                              'Fichier non sauvegardé',
-                                              'Certains fichiers n\'ont pas été '
-                                              'sauvegardé. Voulez vous sauvegarder ?',
-                                              QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
-                                              QMessageBox.Cancel)
+            if buffer[trad_begin:trad_end] != self.data[self.current_game].script_data[tagname][self.script_ppath][index] + '</' + tagname + ' N°' + short_key + '>':
+                answer = QMessageBox.question(
+                    self,
+                    'Fichier non sauvegardé',
+                    'Certains fichiers n\'ont pas été sauvegardé. Voulez vous sauvegarder ?',
+                    QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+                    QMessageBox.Cancel
+                )
 
                 if answer == QMessageBox.Save:
                     return 1
                 elif answer == QMessageBox.Discard:
-                    self.data[self.current_game].script_data[tagname][
-                        self.script_name.text()][
-                        int(prev_script_index)] = translated_backup
+                    self.data[self.current_game].script_data[tagname][self.script_ppath][int(prev_script_index)] = translated_backup
                     return 0
                 elif answer == QMessageBox.Cancel:
                     return 2
 
             if index == len(xml_file_data) - 1:
                 break
-            trad_begin = buffer.find('<' + tagname + ' N°', trad_begin) + len(
-                '<' + tagname + ' N°')
-            trad_end = buffer.find('</' + tagname + ' N°', trad_begin) + len(
-                '</' + tagname + ' N°') + 4
+            trad_begin = buffer.find('<' + tagname + ' N°', trad_begin) + len('<' + tagname + ' N°')
+            trad_end = buffer.find('</' + tagname + ' N°', trad_begin) + len('</' + tagname + ' N°') + 4
             index += 1
 
         return 3
@@ -722,20 +687,14 @@ class Ui_MainWindow(QMainWindow):
             if self.current_game == '':
                 return
             prev_script_index = self.txt_files.currentItem().text()
-            self.data[self.current_game].script_data[tagname][
-                self.script_name.text()][int(prev_script_index)] = '\n' + \
-                                                                   self.plaintexts[
-                                                                       tagname].toPlainText().strip(
-                                                                       '\n').strip() + '\n'
+            self.data[self.current_game].script_data[tagname][self.script_ppath][int(prev_script_index)] = '\n' + self.plaintexts[tagname].toPlainText().strip('\n').strip() + '\n'
 
             # compute file progress
             self.compute_file_progress()
             self.compute_global_progress()
 
-            xml_file = self.script_name.text()
-
             if not self.data_modified_in_dupes:
-                self.save_file(xml_file, tagname)
+                self.save_file(self.script_ppath, tagname)
             else:
                 for xml_file in self.dupes_files_to_save:
                     self.save_file(xml_file, tagname)
@@ -743,19 +702,12 @@ class Ui_MainWindow(QMainWindow):
         self.setWindowTitle(self.script_name.text() + ' - Another SDSE 1.0')
 
     def save_file(self, xml_file, tagname):
-        if not xml_file.startswith('e'):
-            xml_file_file = join('script_data', self.current_game, xml_file.split('-')[0], xml_file.split('.')[0], xml_file)
-        else:
-            xml_file_file = join('script_data', self.current_game, xml_file.split('.')[0], xml_file)
         try:
             xml_file_data = self.data[self.current_game].script_data[tagname][xml_file]
             # open file in binary mode
-            f = open(xml_file_file, 'rb')
+            f = open(xml_file, 'rb')
         except KeyError:
             print("Key error " + xml_file + ". Dupe issue.")
-            return
-        except FileNotFoundError:
-            print(xml_file + " file could not be found in game " + self.current_game)
             return
         # store everything in a variable
         buffer = f.read()
@@ -764,10 +716,8 @@ class Ui_MainWindow(QMainWindow):
         # decode the utf-16-le encoding, in order to be able to manipulate the actual content
         buffer = buffer.decode('utf-16-le')
         # get the index of the first line of script in the buffer
-        trad_begin = buffer.find('<' + tagname + ' N°') + len(
-            '<' + tagname + ' N°')
-        trad_end = buffer.find('</' + tagname + ' N°') + len(
-            '</' + tagname + ' N°') + 4
+        trad_begin = buffer.find('<' + tagname + ' N°') + len('<' + tagname + ' N°')
+        trad_end = buffer.find('</' + tagname + ' N°') + len('</' + tagname + ' N°') + 4
 
         index = 0
         while trad_begin != -1 and trad_end != -1:
@@ -777,21 +727,19 @@ class Ui_MainWindow(QMainWindow):
                 trad_begin += 1
             trad_begin += 1
 
-            buffer = buffer.replace(buffer[trad_begin:trad_end], xml_file_data[
-                index] + '</' + tagname + ' N°' + short_key + '>')
+            buffer = buffer.replace(buffer[trad_begin:trad_end], xml_file_data[index] + '</' + tagname + ' N°' + short_key + '>')
 
             if index == len(xml_file_data) - 1:
                 break
-            trad_begin = buffer.find('<' + tagname + ' N°', trad_begin) + len(
-                '<' + tagname + ' N°')
-            trad_end = buffer.find('</' + tagname + ' N°', trad_begin) + len(
-                '</' + tagname + ' N°') + 4
+            trad_begin = buffer.find('<' + tagname + ' N°', trad_begin) + len('<' + tagname + ' N°')
+            trad_end = buffer.find('</' + tagname + ' N°', trad_begin) + len('</' + tagname + ' N°') + 4
             index += 1
 
         try:
-            with open(xml_file_file, 'wb') as f:
+            with open(xml_file, 'wb') as f:
                 f.write(buffer.encode('utf-16-le'))
-        except OSError:
+        except:
+            print("ERROR SAVING " + self.script_ppath)
             return
 
     def search_in_all_database(self):
@@ -809,12 +757,10 @@ class Ui_MainWindow(QMainWindow):
             for file in script[section]:
                 i = 0
                 for line in script[section][file]:
-                    if line.lower().find(
-                            self.search_ui.search_le.text().lower()) != -1:
-                        if file + '/' + str(i) not in tmp_search_data:
-                            tmp_search_data.append(file + '/' + str(i))
-                            self.search_ui.file_list.addItem(
-                                file + '/' + str(i))
+                    if line.lower().find(self.search_ui.search_le.text().lower()) != -1:
+                        if file + self.search_sepatator + str(i) not in tmp_search_data:
+                            tmp_search_data.append(file + self.search_sepatator + str(i))
+                            self.search_ui.file_list.addItem(file + self.search_sepatator + str(i))
                             try:
                                 self.search_data[file] = {
                                     'TRANSLATED': script['TRANSLATED'][file][i],
@@ -842,7 +788,7 @@ class Ui_MainWindow(QMainWindow):
             self.search_ui.file_list.setCurrentRow(0)
 
     def go_to_script(self, item):
-        tmp = item.text().split('/')
+        tmp = item.text().split(self.search_sepatator)
 
         script_name = tmp[0]
         line_index = tmp[1]
@@ -854,31 +800,14 @@ class Ui_MainWindow(QMainWindow):
                 if not self.check_files_modifications():
                     return
 
-            if not self.script_name.text() == '':
-                self.previous_script_name = self.script_name.text()
-            else:
-                self.previous_script_name = script_name
-
-            self.script_name.setText(script_name)
-            self.setWindowTitle(script_name + ' - Another SDSE 1.0')
-
-            if not self.current_game == '':
-                self.previous_game = self.current_game
-
-            self.overall_progress_label.setText('Progression Totale sur ' + self.current_game)
-            # set the script files in the window
-            txt_files = self.data[self.current_game].script_data['ORIGINAL'][script_name]
-            list_of_txt_index = [str(i) for i in range(len(txt_files))]
-            self.file_has_changed = True
-            self.txt_files.clear()
-            self.txt_files.addItems(list_of_txt_index)
-            self.txt_files.setCurrentItem(self.txt_files.item(int(line_index)))
-            self.reload_ui()
+            if not self.find_ppath(script_name):
+                return
+            self.switch_file(self.script_ppath, line_index=line_index)
 
     def show_search_results(self, row):
         if row == -1:
             return
-        s_name = self.search_ui.file_list.item(row).text().split('/')[0]
+        s_name = self.search_ui.file_list.item(row).text().split(self.search_sepatator)[0]
         self.search_ui.translated.setPlainText(self.search_data[s_name]['TRANSLATED'][1:-1])
         self.search_ui.original.setPlainText(self.search_data[s_name]['ORIGINAL'][1:-1])
         self.search_ui.japanese.setPlainText(self.search_data[s_name]['JAPANESE'][1:-1])
