@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, \
 from os import listdir, remove
 from qtpy import uic
 
+from gittools import GitTools
 from json_file_working import load_json_file, dump_into_json
 from save import get_key
 from script_analyser import XmlAnalyser, length_is_okay, cleaned_text, \
@@ -17,6 +18,7 @@ from translator import SearchThread
 
 json_file_name = 'sdse_data_file.json'
 VERSION = "1.1"
+GIT_ENABLED = False
 
 
 class Ui_MainWindow(QMainWindow):
@@ -263,6 +265,8 @@ class Ui_MainWindow(QMainWindow):
         """
         Reload data from XML
         """
+        if GIT_ENABLED:
+            GitTools.reload()
 
         if self.current_game != '':
 
@@ -700,6 +704,15 @@ class Ui_MainWindow(QMainWindow):
                     self.save_file(xml_file, tagname)
                 self.data_modified_in_dupes = False
         self.setWindowTitle(self.script_name.text() + ' - Another SDSE 1.0')
+
+        if GIT_ENABLED:
+            self.push_changes(self.script_name.text())
+
+    def push_changes(self, script_name):
+        """
+        This method pushes the changes to the git repository
+        """
+        GitTools(script_name).start()
 
     def save_file(self, xml_file, tagname):
         try:
