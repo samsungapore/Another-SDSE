@@ -18,7 +18,7 @@ from po_io import update_po_file, read_po, parse_context_speaker
 from translator import SearchThread
 
 json_file_name = 'sdse_data_file.json'
-VERSION = "1.1"
+VERSION = "1.5"
 
 
 class Ui_MainWindow(QMainWindow):
@@ -34,6 +34,7 @@ class Ui_MainWindow(QMainWindow):
         uic.loadUi('gui/AnotherSDSE.ui', self)
 
         self.setWindowIcon(QIcon('img/cropped-avatarmiraiteam.ico'))
+        self.setWindowTitle('Another SDSE ' + VERSION)
 
         # dupes variable
         self.data = dict()
@@ -494,10 +495,10 @@ class Ui_MainWindow(QMainWindow):
 
         if self.script_database_changed():
             self.setWindowTitle(
-                self.script_name.text() + '* - Another SDSE 1.0')
+                self.script_name.text() + '* - Another SDSE ' + VERSION)
         else:
             self.setWindowTitle(
-                self.script_name.text() + ' - Another SDSE 1.0')
+                self.script_name.text() + ' - Another SDSE ' + VERSION)
 
     def update_script_database(self, game, script_name, prev_script_index):
         # retrieving texts data
@@ -769,7 +770,7 @@ class Ui_MainWindow(QMainWindow):
                 for xml_file in self.dupes_files_to_save:
                     self.save_file(xml_file, tagname)
                 self.data_modified_in_dupes = False
-        self.setWindowTitle(self.script_name.text() + ' - Another SDSE 1.0')
+        self.setWindowTitle(self.script_name.text() + ' - Another SDSE ' + VERSION)
 
     def save_file(self, xml_file, tagname):
         # DRAT 1.5.2+ uses .po files.
