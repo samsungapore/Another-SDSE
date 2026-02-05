@@ -4,12 +4,22 @@
 *.log
 .idea/
 AnotherSDSE.exe
+
+# Python
 __pycache__/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Builds
 build.bat
 build/
 desktop.ini
 dist/
 editor_ui.spec
+
+# Local tooling
 get_jp_text.py
 ghostdriver.log
 img/Minicons-Free.png

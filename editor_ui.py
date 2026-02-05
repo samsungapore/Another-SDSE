@@ -2,6 +2,7 @@
 from PyQt5.QtCore import Qt
 from os.path import join, exists, expanduser
 from sys import argv, exit, stdout
+from pathlib import Path
 
 from PyQt5.QtGui import QPixmap, QIcon, QKeySequence, QTextCursor
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, \
@@ -13,6 +14,7 @@ from json_file_working import load_json_file, dump_into_json
 from save import get_key
 from script_analyser import XmlAnalyser, length_is_okay, cleaned_text, \
     find_w_line, find_to_remove
+from po_io import update_po_file, read_po, parse_context_speaker
 from translator import SearchThread
 
 json_file_name = 'sdse_data_file.json'
@@ -203,14 +205,21 @@ class Ui_MainWindow(QMainWindow):
                                 'Please create a directory "script_data" and create in this dir another dir, '
                                 'for example named "dr1" with the xml files in this directory.')
             exit(0)
-        if len(listdir('./script_data/')) == 0:
+        try:
+            game_dirs = listdir('./script_data/')
+        except FileNotFoundError:
+            # Defensive: if the folder disappears between exists() and listdir().
+            exit(0)
+
+        if len(game_dirs) == 0:
             return
-        percent = 100 / (len(listdir('./script_data/')) * 6)
+
+        percent = 100 / (len(game_dirs) * 6)
         total = percent
         to_retrieve = ('TRANSLATED', 'ORIGINAL', 'JAPANESE', 'COMMENT',
                        'SPEAKER')
 
-        for game in listdir('./script_data/'):
+        for game in game_dirs:
             stdout.write('\r' + str(round(total, 2)) + ' %')
             total += percent
             self.data[game] = XmlAnalyser("./script_data/" + game)
@@ -543,6 +552,34 @@ class Ui_MainWindow(QMainWindow):
 
     def script_database_changed(self, tagname='TRANSLATED'):
 
+        # DRAT 1.5.2+ (.po)
+        if self.script_ppath.lower().endswith('.po'):
+            entries = read_po(Path(self.script_ppath))
+
+            disk_lines = []
+            if tagname == 'SPEAKER':
+                for e in entries:
+                    _, sp = parse_context_speaker(e.msgctxt)
+                    disk_lines.append(sp or '')
+            elif tagname == 'JAPANESE':
+                for e in entries:
+                    disk_lines.append('\n' + "\n".join(e.extracted_comments) + '\n')
+            elif tagname == 'COMMENT':
+                for e in entries:
+                    disk_lines.append('\n' + "\n".join(e.translator_comments) + '\n')
+            elif tagname == 'ORIGINAL':
+                for e in entries:
+                    o = '' if e.msgid == '[EMPTY_LINE]' else e.msgid
+                    disk_lines.append('\n' + o + '\n')
+            else:  # TRANSLATED
+                for e in entries:
+                    t = '' if e.msgstr == '[EMPTY_LINE]' else e.msgstr
+                    disk_lines.append('\n' + t + '\n')
+
+            mem_lines = self.data[self.current_game].script_data[tagname][self.script_ppath]
+            return disk_lines != mem_lines
+
+        # Legacy XML mode
         # open file in binary mode
         f = open(self.script_ppath, 'rb')
         # store everything in a variable
@@ -584,6 +621,39 @@ class Ui_MainWindow(QMainWindow):
         prev_script_index = self.txt_files.currentItem().text()
         translated_backup = self.data[self.current_game].script_data[tagname][self.script_ppath][int(prev_script_index)]
         self.data[self.current_game].script_data[tagname][self.script_ppath][int(prev_script_index)] = '\n' + self.plaintexts[tagname].toPlainText().strip('\n').strip() + '\n'
+
+        # DRAT 1.5.2+ (.po)
+        if self.script_ppath.lower().endswith('.po'):
+            entries = read_po(Path(self.script_ppath))
+
+            disk_lines = []
+            if tagname == 'COMMENT':
+                for e in entries:
+                    disk_lines.append('\n' + "\n".join(e.translator_comments) + '\n')
+            else:  # TRANSLATED
+                for e in entries:
+                    t = '' if e.msgstr == '[EMPTY_LINE]' else e.msgstr
+                    disk_lines.append('\n' + t + '\n')
+
+            mem_lines = self.data[self.current_game].script_data[tagname][self.script_ppath]
+            if disk_lines != mem_lines:
+                answer = QMessageBox.question(
+                    self,
+                    'Fichier non sauvegardé',
+                    'Certains fichiers n\'ont pas été sauvegardé. Voulez vous sauvegarder ?',
+                    QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+                    QMessageBox.Cancel
+                )
+
+                if answer == QMessageBox.Save:
+                    return 1
+                elif answer == QMessageBox.Discard:
+                    self.data[self.current_game].script_data[tagname][self.script_ppath][int(prev_script_index)] = translated_backup
+                    return 0
+                elif answer == QMessageBox.Cancel:
+                    return 2
+
+            return 3
 
         f = open(self.script_ppath, 'rb')
         # store everything in a variable
@@ -702,6 +772,21 @@ class Ui_MainWindow(QMainWindow):
         self.setWindowTitle(self.script_name.text() + ' - Another SDSE 1.0')
 
     def save_file(self, xml_file, tagname):
+        # DRAT 1.5.2+ uses .po files.
+        if xml_file.lower().endswith('.po'):
+            try:
+                po_file_data = self.data[self.current_game].script_data[tagname][xml_file]
+            except KeyError:
+                print("Key error " + xml_file + ". Dupe issue.")
+                return
+
+            # Only TRANSLATED + COMMENT are editable in the UI.
+            if tagname == 'TRANSLATED':
+                update_po_file(Path(xml_file), translated=po_file_data)
+            elif tagname == 'COMMENT':
+                update_po_file(Path(xml_file), comment=po_file_data)
+            return
+
         try:
             xml_file_data = self.data[self.current_game].script_data[tagname][xml_file]
             # open file in binary mode
@@ -860,7 +945,12 @@ class Ui_MainWindow(QMainWindow):
         self.put_in_json()
 
 
-app = QApplication(argv)
-w = Ui_MainWindow()
-w.show()
-exit(app.exec_())
+def main():
+    app = QApplication(argv)
+    w = Ui_MainWindow()
+    w.show()
+    exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()

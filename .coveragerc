@@ -1,0 +1,15 @@
+[run]
+branch = False
+source = .
+
+[report]
+show_missing = True
+skip_covered = False
+fail_under = 100
+
+omit =
+    .venv/*
+    tests/*
+    phantomjs.exe
+    gui/*
+    img/*

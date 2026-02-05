@@ -185,22 +185,87 @@ class XmlAnalyser:
 
     def __init__(self, path):
 
-        self.xml_path = path
+        # Normalize to absolute path so callers can safely pass absolute filenames
+        # (editor_ui sometimes works with absolute paths).
+        self.xml_path = os.path.abspath(path)
         self.script_data = dict()
 
+        # DRAT 1.5.2+ uses .po (gettext). If we detect any .po files, we switch mode.
+        self.mode = "xml"
+        for dirpath, _, filenames in walk(self.xml_path):
+            for filen in filenames:
+                if filen.lower().endswith(".po"):
+                    self.mode = "po"
+                    break
+            if self.mode == "po":
+                break
+
     def analyse_scripts(self, tag_name='TRANSLATED'):
+        """Load scripts from either legacy DRAT XML or DRAT 1.5.2+ PO."""
+
+        if self.mode == "xml":
+            new_script_data = dict()
+
+            for dirpath, dirnames, filenames in walk(self.xml_path):
+                for filen in filenames:
+                    if filen.endswith(".xml"):
+                        xml_file = os.path.join(dirpath, filen)
+                        try:
+                            buf = open_file(xml_file)
+                        except FileNotFoundError:
+                            continue
+
+                        new_script_data[xml_file] = get_file_script(buf, tag_name)
+
+            self.script_data[tag_name] = new_script_data
+            return
+
+        # PO mode
+        from pathlib import Path
+
+        from po_io import parse_context_speaker, read_po
+
         new_script_data = dict()
 
-        for dirpath, dirnames, filenames in walk(self.xml_path):
+        for dirpath, _, filenames in walk(self.xml_path):
             for filen in filenames:
-                if filen.endswith(".xml"):
-                    xml_file = os.path.join(dirpath, filen)
-                    try:
-                        buf = open_file(xml_file)
-                    except FileNotFoundError:
-                        continue
+                if not filen.lower().endswith(".po"):
+                    continue
 
-                    new_script_data[xml_file] = get_file_script(buf, tag_name)
+                po_file = os.path.join(dirpath, filen)
+                entries = read_po(Path(po_file))
+
+                lines: list[str] = []
+
+                if tag_name == "SPEAKER":
+                    for e in entries:
+                        _, sp = parse_context_speaker(e.msgctxt)
+                        lines.append(sp or "")
+                elif tag_name == "JAPANESE":
+                    for e in entries:
+                        jp = "\n".join(e.extracted_comments)
+                        lines.append("\n" + jp + "\n")
+                elif tag_name == "COMMENT":
+                    for e in entries:
+                        c = "\n".join(e.translator_comments)
+                        lines.append("\n" + c + "\n")
+                elif tag_name == "ORIGINAL":
+                    for e in entries:
+                        o = e.msgid
+                        if o == "[EMPTY_LINE]":
+                            o = ""
+                        lines.append("\n" + o + "\n")
+                elif tag_name == "TRANSLATED":
+                    for e in entries:
+                        t = e.msgstr
+                        if t == "[EMPTY_LINE]":
+                            t = ""
+                        lines.append("\n" + t + "\n")
+                else:
+                    # Unknown tag for PO mode
+                    lines = ["\n\n" for _ in entries]
+
+                new_script_data[po_file] = lines
 
         self.script_data[tag_name] = new_script_data
 
