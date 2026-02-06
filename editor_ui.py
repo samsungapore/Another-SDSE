@@ -1,8 +1,17 @@
 # -*- coding: utf-8 -*-
+import sys
+import warnings
+warnings.filterwarnings("ignore", message="sipPyTypeDict.*is deprecated")
 from PyQt5.QtCore import Qt
-from os.path import join, exists, expanduser
+from os.path import basename, join, exists, expanduser
 from sys import argv, exit, stdout
 from pathlib import Path
+
+
+def resource_path(relative_path):
+    """Return absolute path to resource, works for dev and PyInstaller."""
+    base_path = getattr(sys, '_MEIPASS', Path(__file__).resolve().parent)
+    return str(Path(base_path) / relative_path)
 
 from PyQt5.QtGui import QPixmap, QIcon, QKeySequence, QTextCursor
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, \
@@ -31,9 +40,9 @@ class Ui_MainWindow(QMainWindow):
         Initialization of the main GUI
         """
         QMainWindow.__init__(self)
-        uic.loadUi('gui/AnotherSDSE.ui', self)
+        uic.loadUi(resource_path('gui/AnotherSDSE.ui'), self)
 
-        self.setWindowIcon(QIcon('img/cropped-avatarmiraiteam.ico'))
+        self.setWindowIcon(QIcon(resource_path('img/cropped-avatarmiraiteam.ico')))
         self.setWindowTitle('Another SDSE ' + VERSION)
 
         # dupes variable
@@ -70,10 +79,10 @@ class Ui_MainWindow(QMainWindow):
         self.worker = SearchThread()
 
         self.open_ui = QDialog()
-        uic.loadUi('gui/open_dialog.ui', self.open_ui)
+        uic.loadUi(resource_path('gui/open_dialog.ui'), self.open_ui)
 
         self.search_ui = QDialog()
-        uic.loadUi('gui/search_ui.ui', self.search_ui)
+        uic.loadUi(resource_path('gui/search_ui.ui'), self.search_ui)
 
         self.load_data()
         self.init_open_ui_tree_view()
@@ -313,7 +322,7 @@ class Ui_MainWindow(QMainWindow):
                 tree_widgets.append(treewidgetitem)
 
             for elem in sorted(list(self.data[game].script_data['ORIGINAL'].keys())):
-                elem = elem.split('/')[-1]
+                elem = basename(elem)
                 if elem[1:3].isnumeric() and int(elem[1:3]) <= 7:
                     childtree = QTreeWidgetItem(tree_widgets[int(elem[2])])
                 else:
@@ -359,10 +368,10 @@ class Ui_MainWindow(QMainWindow):
         if not self.script_name.text() == '':
             self.previous_script_name = self.script_name.text()
         else:
-            self.previous_script_name = script_name.split('/')[-1]
+            self.previous_script_name = basename(script_name)
 
-        self.script_name.setText(script_name.split('/')[-1])
-        self.setWindowTitle(script_name.split('/')[-1] + ' - Another SDSE ' + VERSION)
+        self.script_name.setText(basename(script_name))
+        self.setWindowTitle(basename(script_name) + ' - Another SDSE ' + VERSION)
 
         if not self.current_game == '':
             self.previous_game = self.current_game
@@ -723,11 +732,11 @@ class Ui_MainWindow(QMainWindow):
 
         if length_is_okay(self.translated.toPlainText()):
             if self.pixmap_line_len is None or self.pixmap_line_len == 'error':
-                self.check_line_icon.setPixmap(QPixmap('img/ok.jpeg'))
+                self.check_line_icon.setPixmap(QPixmap(resource_path('img/ok.jpeg')))
                 self.pixmap_line_len = 'ok'
         else:
             if self.pixmap_line_len is None or self.pixmap_line_len == 'ok':
-                self.check_line_icon.setPixmap(QPixmap('img/error.png'))
+                self.check_line_icon.setPixmap(QPixmap(resource_path('img/error.png')))
                 self.pixmap_line_len = 'error'
 
     def update_line_len(self):
