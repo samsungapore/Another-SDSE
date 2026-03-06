@@ -6,6 +6,8 @@ from PyQt5.QtCore import Qt
 from os.path import basename, join, exists, expanduser
 from sys import argv, exit, stdout
 from pathlib import Path
+import subprocess
+import threading
 
 
 def resource_path(relative_path):
@@ -28,6 +30,41 @@ from translator import SearchThread
 
 json_file_name = 'sdse_data_file.json'
 VERSION = "1.5"
+
+
+def _git_commit_po(po_path: str):
+    """
+    Auto-commit a .po file to its local git repo (non-blocking background thread).
+    Does NOT push — run `git push` manually or set up a periodic push.
+    """
+    def _run():
+        try:
+            p = Path(po_path)
+            # Find repo root from the file's directory
+            result = subprocess.run(
+                ['git', 'rev-parse', '--show-toplevel'],
+                cwd=str(p.parent),
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode != 0:
+                return  # Not a git repo, silently skip
+            repo_root = result.stdout.strip()
+
+            # Stage the file
+            subprocess.run(
+                ['git', 'add', po_path],
+                cwd=repo_root, capture_output=True, timeout=5
+            )
+            # Commit (skip if nothing staged)
+            msg = f'Updated {p.parent.name}/{p.name}'
+            subprocess.run(
+                ['git', 'commit', '-m', msg],
+                cwd=repo_root, capture_output=True, timeout=10
+            )
+        except Exception:
+            pass  # Never crash the UI
+
+    threading.Thread(target=_run, daemon=True).start()
 
 
 class Ui_MainWindow(QMainWindow):
@@ -793,8 +830,10 @@ class Ui_MainWindow(QMainWindow):
             # Only TRANSLATED + COMMENT are editable in the UI.
             if tagname == 'TRANSLATED':
                 update_po_file(Path(xml_file), translated=po_file_data)
+                _git_commit_po(xml_file)
             elif tagname == 'COMMENT':
                 update_po_file(Path(xml_file), comment=po_file_data)
+                _git_commit_po(xml_file)
             return
 
         try:
